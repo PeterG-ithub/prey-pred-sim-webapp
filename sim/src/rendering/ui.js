@@ -7,6 +7,7 @@ export function initUI({ onPlay, onRestart }) {
   // Speed slider
   const speedSlider = document.getElementById('speed-slider');
   const speedVal    = document.getElementById('speed-val');
+  speedVal.textContent = speedSlider.value;
   speedSlider.addEventListener('input', (e) => {
     _speed = Number(e.target.value);
     speedVal.textContent = _speed;
@@ -53,6 +54,17 @@ export function initUI({ onPlay, onRestart }) {
   btnPanel.addEventListener('click',      () => toggleGraph(!graphPanel.classList.contains('open')));
   btnCloseGraph.addEventListener('click', () => toggleGraph(false));
 
+  // Predator settings
+  _bindSetting('set-predator-initial',      'val-predator-initial',      (v) => { config.predatorInitial      = v; });
+  _bindSetting('set-predator-satiation',    'val-predator-satiation',    (v) => { config.predatorSatiation    = v; }, v => `${v}%`);
+  _bindSetting('set-predator-hunger',       'val-predator-hunger',       (v) => { config.predatorHunger       = v; }, v => `${v}%`);
+  _bindSetting('set-predator-perception',   'val-predator-perception',   (v) => { config.predatorPerception   = v; }, v => `${v}px`);
+  _bindSetting('set-predator-speed',        'val-predator-speed',        (v) => { config.predatorSpeed        = v; });
+  _bindSetting('set-predator-metabolism',   'val-predator-metabolism',   (v) => { config.predatorMetabolism   = v; });
+  _bindSetting('set-predator-lifespan',     'val-predator-lifespan',     (v) => { config.predatorLifespan     = v; }, v => `${v} yrs`);
+  _bindSetting('set-predator-repo-cooldown','val-predator-repo-cooldown',(v) => { config.predatorRepoCooldown = v; }, v => `${v} yrs`);
+  _bindSetting('set-predator-mate-radius',  'val-predator-mate-radius',  (v) => { config.predatorMateRadius   = v; }, v => `${v}px`);
+
   // Grass settings
   _bindSetting('set-initial-grass',       'val-initial-grass',       (v) => { config.initialGrass      = v; });
   _bindSetting('set-growth-speed',        'val-growth-speed',        (v) => { config.growthSpeed        = v; });
@@ -76,6 +88,7 @@ export function initUI({ onPlay, onRestart }) {
 function _bindSetting(sliderId, valId, onChange, format = v => v) {
   const slider = document.getElementById(sliderId);
   const label  = document.getElementById(valId);
+  label.textContent = format(Number(slider.value));
   slider.addEventListener('input', (e) => {
     const v = Number(e.target.value);
     label.textContent = format(v);

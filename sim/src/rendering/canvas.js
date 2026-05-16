@@ -1,4 +1,5 @@
 import { TICKS_PER_YEAR } from '../entities/prey.js';
+import { PRED_TICKS_PER_YEAR } from '../entities/predator.js';
 
 const GRID_CELL  = 40;
 const GRID_COLOR = 'rgba(255, 255, 255, 0.04)';
@@ -21,6 +22,7 @@ export function drawFrame(ctx, width, height, sim, inspected = null) {
   if (sim) {
     drawGrass(ctx, sim.grass);
     drawPrey(ctx, sim.prey);
+    drawPredators(ctx, sim.predators);
     if (inspected) drawInspect(ctx, inspected, width, height);
   }
 
@@ -43,6 +45,13 @@ const LINE_STATE_COLOR = {
   wander:    null,          // default to sex colour
   seek_food: '#fb923c',     // orange
   eat:       '#4ade80',     // green
+  seek_mate: '#e879f9',     // purple
+};
+
+const PRED_LINE_COLOR = {
+  wander:    '#a16207',     // dark yellow
+  seek_prey: '#ef4444',     // red
+  eat:       '#f97316',     // orange (feeding)
   seek_mate: '#e879f9',     // purple
 };
 
@@ -87,6 +96,31 @@ function drawGrass(ctx, patches) {
   }
 }
 
+function drawPredators(ctx, predators) {
+  const BODY_R   = 7;
+  const LINE_LEN = 11;
+
+  for (const d of predators) {
+    const bodyColor = d.sex === 'M' ? '#fde047' : '#fb923c';
+    const lineColor = PRED_LINE_COLOR[d.state] ?? '#a16207';
+
+    const tipX = d.x + Math.cos(d.angle) * LINE_LEN;
+    const tipY = d.y + Math.sin(d.angle) * LINE_LEN;
+
+    ctx.strokeStyle = lineColor;
+    ctx.lineWidth   = 2;
+    ctx.beginPath();
+    ctx.moveTo(d.x, d.y);
+    ctx.lineTo(tipX, tipY);
+    ctx.stroke();
+
+    ctx.fillStyle = bodyColor;
+    ctx.beginPath();
+    ctx.arc(d.x, d.y, BODY_R, 0, Math.PI * 2);
+    ctx.fill();
+  }
+}
+
 function drawInspect(ctx, { type, entity }, W, H) {
   if (type === 'prey' && entity.dead) return;
   if (type === 'grass' && entity.amount <= 0) return;
@@ -122,7 +156,9 @@ function drawInspect(ctx, { type, entity }, W, H) {
   ctx.setLineDash([]);
 
   // Info card
-  const lines = type === 'prey' ? _preyLines(entity) : _grassLines(entity);
+  const lines = type === 'prey' ? _preyLines(entity)
+              : type === 'predator' ? _predLines(entity)
+              : _grassLines(entity);
   const PAD = 9, LH = 15, CW = 148;
   const CH  = PAD * 2 + lines.length * LH;
   let cx = ex + 16, cy = ey - CH / 2;
@@ -156,6 +192,21 @@ function _preyLines(p) {
     { text: `state   ${STATE_LABEL[state] ?? state}`, color: STATE_COLOR[state] ?? '#c0c0d8' },
     { text: `energy  ${bar} ${energy}%`,              color: '#c0c0d8' },
     { text: `age     ${yrs} yrs`,                     color: '#7a7a9a' },
+  ];
+}
+
+const PRED_STATE_LABEL = { wander: 'WANDER', seek_prey: 'SEEK PREY', eat: 'EAT', seek_mate: 'SEEK MATE' };
+const PRED_STATE_COLOR = { wander: '#a16207', seek_prey: '#ef4444', eat: '#f97316', seek_mate: '#e879f9' };
+
+function _predLines(d) {
+  const sexSym = d.sex === 'M' ? '♂' : '♀';
+  const bar    = _bar(d.energy / 100, 8);
+  const yrs    = (d.age / PRED_TICKS_PER_YEAR).toFixed(1);
+  return [
+    { text: `${sexSym} PREDATOR`,                              color: d.sex === 'M' ? '#fde047' : '#fb923c' },
+    { text: `state   ${PRED_STATE_LABEL[d.state] ?? d.state}`, color: PRED_STATE_COLOR[d.state] ?? '#c0c0d8' },
+    { text: `energy  ${bar} ${Math.round(d.energy)}%`,         color: '#c0c0d8' },
+    { text: `age     ${yrs} yrs`,                              color: '#7a7a9a' },
   ];
 }
 

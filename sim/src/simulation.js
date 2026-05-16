@@ -2,29 +2,38 @@ import { Grass } from './entities/grass.js';
 import { Prey, STATE, TICKS_PER_YEAR, ADULT_AGE, MAX_ENERGY,
          ENERGY_PER_BITE, REPRO_COST, ABANDON_AMOUNT,
          SCAN_INTERVAL, WANDER_TURN, SEEK_TURN } from './entities/prey.js';
+import { Predator, PRED_STATE, PRED_TICKS_PER_YEAR, PRED_ADULT_AGE,
+         PRED_MAX_ENERGY, PRED_REPRO_COST, PRED_SCAN_INTERVAL,
+         PRED_WANDER_TURN, PRED_SEEK_TURN, PRED_KILL_RADIUS,
+         HUNT_ENERGY_GAIN, PRED_EAT_TICKS } from './entities/predator.js';
 import { config, toGrowthRate, toSpreadChance, toRandomSpawn,
-         toPreySpeed, toMetabolism, toEatRate } from './config.js';
+         toPreySpeed, toMetabolism, toEatRate,
+         toPredSpeed, toPredMetabolism } from './config.js';
 import { SpatialGrid } from './utils/spatialGrid.js';
 import { GraphHistory } from './rendering/graph.js';
 
-const SPREAD_THRESHOLD    = 0.85;
-const SPREAD_RADIUS       = 80;
-const MIN_PATCH_DIST      = 28;
-const EAT_RADIUS          = 12;   // must be this close to targeted grass to enter EAT
-const OPPORTUNISTIC_RADIUS = 22;  // snack on any grass within this range while passing
+const SPREAD_THRESHOLD     = 0.85;
+const SPREAD_RADIUS        = 80;
+const MIN_PATCH_DIST       = 28;
+const EAT_RADIUS           = 12;   // must be this close to targeted grass to enter EAT
+const OPPORTUNISTIC_RADIUS = 22;   // snack on any grass within this range while passing
+const PREY_FEAR_RADIUS     = 90;   // prey flee predators within this range
 
 export class Simulation {
   constructor(width, height) {
     this.width     = width;
     this.height    = height;
-    this.grass     = [];
-    this.prey      = [];
-    this.tick      = 0;
-    this._grassGrid  = new SpatialGrid(100);
-    this._preyGrid   = new SpatialGrid(100);
-    this.graphHistory = new GraphHistory();
+    this.grass      = [];
+    this.prey       = [];
+    this.predators  = [];
+    this.tick       = 0;
+    this._grassGrid     = new SpatialGrid(100);
+    this._preyGrid      = new SpatialGrid(100);
+    this._predatorGrid  = new SpatialGrid(100);
+    this.graphHistory   = new GraphHistory();
     this._initGrass();
     this._initPrey();
+    this._initPredators();
   }
 
   // ── Init ──────────────────────────────────────────────────────────────
@@ -47,13 +56,23 @@ export class Simulation {
     }
   }
 
+  _initPredators() {
+    for (let i = 0; i < config.predatorInitial; i++) {
+      this.predators.push(new Predator(
+        Math.random() * this.width,
+        Math.random() * this.height,
+      ));
+    }
+  }
+
   // ── Main update ───────────────────────────────────────────────────────
   update(speedMult = 1) {
     this.tick++;
     this._updateGrass(speedMult);
     this._rebuildGrids();
     this._updatePrey(speedMult);
-    this.graphHistory.record(this.tick, this.prey.length, 0);
+    this._updatePredators(speedMult);
+    this.graphHistory.record(this.tick, this.prey.length, this.predators.length);
   }
 
   _rebuildGrids() {
@@ -61,6 +80,8 @@ export class Simulation {
     for (const g of this.grass) this._grassGrid.insert(g);
     this._preyGrid.clear();
     for (const p of this.prey) this._preyGrid.insert(p);
+    this._predatorGrid.clear();
+    for (const d of this.predators) this._predatorGrid.insert(d);
   }
 
   // ── Grass ─────────────────────────────────────────────────────────────
@@ -127,6 +148,7 @@ export class Simulation {
     const mateRadius = config.preyMateRadius;
 
     const newborns = [];
+    const fearRadius = PREY_FEAR_RADIUS;
 
     for (const p of this.prey) {
       p.age         += speedMult;
@@ -134,6 +156,15 @@ export class Simulation {
       p.repCooldown -= speedMult;
 
       if (p.energy <= 0 || p.age > lifespan) { p.dead = true; continue; }
+
+      // Flee nearest predator — overrides state machine movement
+      const threat = this._predatorGrid.nearest(p.x, p.y, fearRadius);
+      if (threat) {
+        const fleeAngle = Math.atan2(p.y - threat.y, p.x - threat.x);
+        p.angle = _lerpAngle(p.angle, fleeAngle, SEEK_TURN * 2 * speedMult);
+        this._moveAndBounce(p, speed * 1.6, speedMult);
+        continue;
+      }
 
       switch (p.state) {
         case STATE.WANDER:
@@ -287,10 +318,140 @@ export class Simulation {
     }
   }
 
+  // ── Predator state machine ────────────────────────────────────────────
+  _updatePredators(speedMult) {
+    const satiationE      = config.predatorSatiation    * PRED_MAX_ENERGY / 100;
+    const hungerE         = config.predatorHunger       * PRED_MAX_ENERGY / 100;
+    const lifespan        = config.predatorLifespan     * PRED_TICKS_PER_YEAR;
+    const repoCooldownTicks = config.predatorRepoCooldown * PRED_TICKS_PER_YEAR;
+    const metabolism      = toPredMetabolism(config.predatorMetabolism);
+    const speed           = toPredSpeed(config.predatorSpeed);
+    const perception      = config.predatorPerception;
+    const mateRadius      = config.predatorMateRadius;
+
+    const newborns = [];
+
+    for (const d of this.predators) {
+      d.age         += speedMult;
+      d.energy      -= metabolism * speedMult;
+      d.repCooldown -= speedMult;
+
+      if (d.energy <= 0 || d.age > lifespan) { d.dead = true; continue; }
+
+      switch (d.state) {
+        case PRED_STATE.WANDER:
+          this._statePredWander(d, speedMult, speed, satiationE, hungerE, perception, repoCooldownTicks);
+          break;
+        case PRED_STATE.SEEK_PREY:
+          this._statePredSeekPrey(d, speedMult, speed, perception);
+          break;
+        case PRED_STATE.EAT:
+          this._statePredEat(d, speedMult);
+          break;
+        case PRED_STATE.SEEK_MATE:
+          this._statePredSeekMate(d, speedMult, speed, hungerE, satiationE, mateRadius, newborns, repoCooldownTicks);
+          break;
+      }
+    }
+
+    this.predators = this.predators.filter(d => !d.dead);
+    for (const nb of newborns) this.predators.push(nb);
+  }
+
+  _statePredWander(d, speedMult, speed, satiationE, hungerE, perception, repoCooldownTicks) {
+    d.scanCooldown -= speedMult;
+    if (d.scanCooldown > 0) {
+      d.angle += (Math.random() - 0.5) * 2 * PRED_WANDER_TURN * speedMult;
+      this._moveAndBounce(d, speed, speedMult);
+      return;
+    }
+    d.scanCooldown = PRED_SCAN_INTERVAL;
+
+    if (d.energy < satiationE) {
+      const prey = this._preyGrid.nearest(d.x, d.y, perception, p => !p.dead);
+      if (prey) { d.targetPrey = prey; d.state = PRED_STATE.SEEK_PREY; return; }
+    }
+
+    if (d.energy >= satiationE && d.age > PRED_ADULT_AGE && d.repCooldown <= 0) {
+      const mate = this._predatorGrid.nearest(d.x, d.y, perception, m =>
+        m !== d && !m.dead && m.sex !== d.sex &&
+        m.age > PRED_ADULT_AGE && m.energy > hungerE,
+      );
+      if (mate) { d.targetMate = mate; d.state = PRED_STATE.SEEK_MATE; return; }
+    }
+
+    d.angle += (Math.random() - 0.5) * 2 * PRED_WANDER_TURN * speedMult;
+    this._moveAndBounce(d, speed, speedMult);
+  }
+
+  _statePredSeekPrey(d, speedMult, speed, perception) {
+    if (!d.targetPrey || d.targetPrey.dead) {
+      d.targetPrey = null; d.state = PRED_STATE.WANDER; return;
+    }
+
+    // Give up if prey escaped perception range
+    const dx = d.targetPrey.x - d.x;
+    const dy = d.targetPrey.y - d.y;
+    const d2 = dx * dx + dy * dy;
+    if (d2 > perception * perception) {
+      d.targetPrey = null; d.state = PRED_STATE.WANDER; return;
+    }
+
+    // Kill on contact — enter EAT to simulate feeding pause
+    if (d2 < PRED_KILL_RADIUS * PRED_KILL_RADIUS) {
+      d.energy = Math.min(PRED_MAX_ENERGY, d.energy + d.targetPrey.energy * HUNT_ENERGY_GAIN);
+      d.targetPrey.dead = true;
+      d.targetPrey = null;
+      d.eatTimer = PRED_EAT_TICKS;
+      d.state = PRED_STATE.EAT;
+      return;
+    }
+
+    d.angle = _lerpAngle(d.angle, Math.atan2(dy, dx), PRED_SEEK_TURN * speedMult);
+    this._moveAndBounce(d, speed, speedMult);
+  }
+
+  _statePredEat(d, speedMult) {
+    d.eatTimer -= speedMult;
+    if (d.eatTimer <= 0) d.state = PRED_STATE.WANDER;
+  }
+
+  _statePredSeekMate(d, speedMult, speed, hungerE, satiationE, mateRadius, newborns, repoCooldownTicks) {
+    if (d.energy < hungerE) {
+      d.targetMate = null; d.state = PRED_STATE.WANDER; return;
+    }
+    if (!d.targetMate || d.targetMate.dead) {
+      d.targetMate = null; d.state = PRED_STATE.WANDER; return;
+    }
+
+    const dx = d.targetMate.x - d.x;
+    const dy = d.targetMate.y - d.y;
+    if (dx * dx + dy * dy < mateRadius * mateRadius) {
+      this._reproducePredators(d, d.targetMate, newborns, hungerE, repoCooldownTicks);
+      d.targetMate = null; d.state = PRED_STATE.WANDER; return;
+    }
+
+    d.angle = _lerpAngle(d.angle, Math.atan2(dy, dx), PRED_SEEK_TURN * speedMult);
+    this._moveAndBounce(d, speed, speedMult);
+  }
+
+  _reproducePredators(d, partner, newborns, hungerE, repoCooldownTicks) {
+    if (partner.energy < hungerE || partner.dead) return;
+    const female = d.sex === 'F' ? d : partner;
+    const male   = d.sex === 'M' ? d : partner;
+    female.energy     -= PRED_REPRO_COST;
+    female.repCooldown = repoCooldownTicks;
+    male.repCooldown   = repoCooldownTicks * 0.5;
+    newborns.push(new Predator(
+      female.x + (Math.random() - 0.5) * 20,
+      female.y + (Math.random() - 0.5) * 20,
+    ));
+  }
+
   // ── Stats ─────────────────────────────────────────────────────────────
   stats() {
     const biomass = Math.round(this.grass.reduce((s, g) => s + g.amount, 0));
-    return { grass: biomass, prey: this.prey.length, predators: 0, tick: this.tick };
+    return { grass: biomass, prey: this.prey.length, predators: this.predators.length, tick: this.tick };
   }
 }
 

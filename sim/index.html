@@ -428,11 +428,61 @@
         </div>
 
         <div class="settings-section">
+          <h3>Predators</h3>
+
+          <div class="setting-row">
+            <div class="setting-label">Initial count <span class="setting-val" id="val-predator-initial">3</span></div>
+            <input class="setting-slider" type="range" id="set-predator-initial" min="1" max="20" value="10" />
+            <span class="setting-note">Takes effect on restart</span>
+          </div>
+
+          <div class="setting-row">
+            <div class="setting-label">Satiation threshold <span class="setting-val" id="val-predator-satiation">80%</span></div>
+            <input class="setting-slider" type="range" id="set-predator-satiation" min="30" max="100" value="80" />
+          </div>
+
+          <div class="setting-row">
+            <div class="setting-label">Hunger threshold <span class="setting-val" id="val-predator-hunger">35%</span></div>
+            <input class="setting-slider" type="range" id="set-predator-hunger" min="10" max="70" value="35" />
+          </div>
+
+          <div class="setting-row">
+            <div class="setting-label">Perception radius <span class="setting-val" id="val-predator-perception">150px</span></div>
+            <input class="setting-slider" type="range" id="set-predator-perception" min="50" max="300" step="10" value="150" />
+          </div>
+
+          <div class="setting-row">
+            <div class="setting-label">Speed <span class="setting-val" id="val-predator-speed">6</span></div>
+            <input class="setting-slider" type="range" id="set-predator-speed" min="1" max="10" value="6" />
+          </div>
+
+          <div class="setting-row">
+            <div class="setting-label">Metabolism <span class="setting-val" id="val-predator-metabolism">6</span></div>
+            <input class="setting-slider" type="range" id="set-predator-metabolism" min="1" max="10" value="6" />
+          </div>
+
+          <div class="setting-row">
+            <div class="setting-label">Lifespan <span class="setting-val" id="val-predator-lifespan">20 yrs</span></div>
+            <input class="setting-slider" type="range" id="set-predator-lifespan" min="5" max="60" step="5" value="20" />
+          </div>
+
+          <div class="setting-row">
+            <div class="setting-label">Repro cooldown <span class="setting-val" id="val-predator-repo-cooldown">8 yrs</span></div>
+            <input class="setting-slider" type="range" id="set-predator-repo-cooldown" min="1" max="30" value="8" />
+          </div>
+
+          <div class="setting-row">
+            <div class="setting-label">Mate radius <span class="setting-val" id="val-predator-mate-radius">30px</span></div>
+            <input class="setting-slider" type="range" id="set-predator-mate-radius" min="10" max="60" step="5" value="30" />
+          </div>
+        </div>
+
+        <div class="settings-section">
           <h3>Prey</h3>
 
           <div class="setting-row">
             <div class="setting-label">Initial count <span class="setting-val" id="val-initial-prey">20</span></div>
-            <input class="setting-slider" type="range" id="set-initial-prey" min="1" max="100" value="20" />
+            <input class="setting-slider" type="range" id="set-initial-prey" min="1" max="200" value="100" />
             <span class="setting-note">Takes effect on restart</span>
           </div>
 

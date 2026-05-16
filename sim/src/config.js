@@ -6,8 +6,19 @@ export const config = {
   maxPatches:        200,
   grassRandomSpawn:  2,    // 1–10 scale
 
+  // ── Predators ──────────────────────────────────────────────────────────
+  predatorInitial:      10,
+  predatorSatiation:    80,   // % — stop hunting, seek mate
+  predatorHunger:       35,   // % — abandon mate-seeking, hunt
+  predatorPerception:   150,  // px
+  predatorSpeed:        6,    // 1–10 scale
+  predatorMetabolism:   6,    // 1–10 scale
+  predatorLifespan:     20,   // years
+  predatorRepoCooldown: 8,    // years
+  predatorMateRadius:   30,   // px
+
   // ── Prey ───────────────────────────────────────────────────────────────
-  initialPrey:      20,
+  initialPrey:      100,
   preySatiation:    90,   // % of max energy — stop eating, seek mate
   preyHunger:       60,   // % of max energy — abandon mate-seeking, find food
   preyPerception:   100,  // px — detection radius for grass and mates
@@ -23,6 +34,10 @@ export const config = {
 export const toGrowthRate      = (s) => s * 0.0005;
 export const toSpreadChance    = (s) => s * 0.00036;
 export const toRandomSpawn     = (s) => s * 0.002;   // 1→0.002  2→0.004(orig)  10→0.02
+
+// ── Predator helpers ───────────────────────────────────────────────────────
+export const toPredSpeed      = (s) => 0.4 + s * 0.26;  // 6→1.96 (faster than prey)
+export const toPredMetabolism = (s) => s * 0.006;        // 6→0.036
 
 // ── Prey helpers ───────────────────────────────────────────────────────────
 export const toPreySpeed    = (s) => 0.3 + s * 0.22;  // 1→0.52  5→1.4  10→2.5
