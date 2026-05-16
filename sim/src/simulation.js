@@ -17,7 +17,7 @@ const SPREAD_RADIUS        = 80;
 const MIN_PATCH_DIST       = 28;
 const EAT_RADIUS           = 12;   // must be this close to targeted grass to enter EAT
 const OPPORTUNISTIC_RADIUS = 22;   // snack on any grass within this range while passing
-const PREY_FEAR_RADIUS     = 90;   // prey flee predators within this range
+const PREY_FEAR_RADIUS     = 55;   // prey flee predators within this range
 
 export class Simulation {
   constructor(width, height) {
@@ -162,7 +162,10 @@ export class Simulation {
       if (threat) {
         const fleeAngle = Math.atan2(p.y - threat.y, p.x - threat.x);
         p.angle = _lerpAngle(p.angle, fleeAngle, SEEK_TURN * 2 * speedMult);
-        this._moveAndBounce(p, speed * 1.6, speedMult);
+        // Sprint speed scales with energy — tired/hungry prey are slower
+        const stamina   = 0.6 + 0.8 * (p.energy / MAX_ENERGY);
+        p.energy -= metabolism * 1.5 * speedMult;   // fleeing is exhausting
+        this._moveAndBounce(p, speed * stamina, speedMult);
         continue;
       }
 
@@ -375,7 +378,7 @@ export class Simulation {
     if (d.energy >= satiationE && d.age > PRED_ADULT_AGE && d.repCooldown <= 0) {
       const mate = this._predatorGrid.nearest(d.x, d.y, perception, m =>
         m !== d && !m.dead && m.sex !== d.sex &&
-        m.age > PRED_ADULT_AGE && m.energy > hungerE,
+        m.age > PRED_ADULT_AGE && m.energy >= satiationE && m.repCooldown <= 0,
       );
       if (mate) { d.targetMate = mate; d.state = PRED_STATE.SEEK_MATE; return; }
     }
@@ -407,8 +410,10 @@ export class Simulation {
       return;
     }
 
+    // Hunt speed scales with energy — starving predators are slower
+    const stamina = 0.5 + 0.7 * (d.energy / PRED_MAX_ENERGY);
     d.angle = _lerpAngle(d.angle, Math.atan2(dy, dx), PRED_SEEK_TURN * speedMult);
-    this._moveAndBounce(d, speed, speedMult);
+    this._moveAndBounce(d, speed * stamina, speedMult);
   }
 
   _statePredEat(d, speedMult) {

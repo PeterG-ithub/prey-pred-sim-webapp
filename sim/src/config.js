@@ -11,8 +11,8 @@ export const config = {
   predatorSatiation:    80,   // % — stop hunting, seek mate
   predatorHunger:       35,   // % — abandon mate-seeking, hunt
   predatorPerception:   150,  // px
-  predatorSpeed:        6,    // 1–10 scale
-  predatorMetabolism:   6,    // 1–10 scale
+  predatorSpeed:        4,    // 1–10 scale
+  predatorMetabolism:   5,    // 1–10 scale
   predatorLifespan:     20,   // years
   predatorRepoCooldown: 8,    // years
   predatorMateRadius:   30,   // px
@@ -37,7 +37,7 @@ export const toRandomSpawn     = (s) => s * 0.002;   // 1→0.002  2→0.004(ori
 
 // ── Predator helpers ───────────────────────────────────────────────────────
 export const toPredSpeed      = (s) => 0.4 + s * 0.26;  // 6→1.96 (faster than prey)
-export const toPredMetabolism = (s) => s * 0.006;        // 6→0.036
+export const toPredMetabolism = (s) => s * 0.010;        // 5→0.050  8→0.080
 
 // ── Prey helpers ───────────────────────────────────────────────────────────
 export const toPreySpeed    = (s) => 0.3 + s * 0.22;  // 1→0.52  5→1.4  10→2.5

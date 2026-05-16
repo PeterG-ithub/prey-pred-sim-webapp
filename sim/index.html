@@ -350,12 +350,37 @@
       #tick-val     { color: var(--text); font-weight: bold; }
 
       #btn-panel { margin-left: auto; }
+
+      /* ── Inspect card ── */
+      #inspect-card {
+        position: fixed;
+        left: 16px;
+        bottom: calc(var(--bar-h) + 16px);
+        background: rgba(8, 8, 18, 0.92);
+        border: 1px solid rgba(255,255,255,0.12);
+        border-radius: 6px;
+        padding: 10px 12px;
+        font-size: 11px;
+        font-family: 'Courier New', monospace;
+        line-height: 1.7;
+        pointer-events: none;
+        z-index: 15;
+        display: none;
+        min-width: 160px;
+      }
+      #inspect-card.visible { display: block; }
+      #inspect-card .ic-title { font-weight: bold; margin-bottom: 2px; }
+      #inspect-card .ic-row   { color: #c0c0d8; }
+      #inspect-card .ic-dim   { color: #7a7a9a; }
     </style>
   </head>
   <body>
 
     <button id="btn-panel">⊞ Population</button>
     <button id="btn-settings">⚙ Settings</button>
+
+    <!-- Inspect card -->
+    <div id="inspect-card"></div>
 
     <!-- Graph panel (left) -->
     <div id="graph-panel">
@@ -453,12 +478,12 @@
 
           <div class="setting-row">
             <div class="setting-label">Speed <span class="setting-val" id="val-predator-speed">6</span></div>
-            <input class="setting-slider" type="range" id="set-predator-speed" min="1" max="10" value="6" />
+            <input class="setting-slider" type="range" id="set-predator-speed" min="1" max="10" value="4" />
           </div>
 
           <div class="setting-row">
             <div class="setting-label">Metabolism <span class="setting-val" id="val-predator-metabolism">6</span></div>
-            <input class="setting-slider" type="range" id="set-predator-metabolism" min="1" max="10" value="6" />
+            <input class="setting-slider" type="range" id="set-predator-metabolism" min="1" max="10" value="5" />
           </div>
 
           <div class="setting-row">

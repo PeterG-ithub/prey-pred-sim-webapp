@@ -1,13 +1,15 @@
 import { config } from '../config.js';
+import { inspectLines } from './canvas.js';
 
-let _speed = 5;
+let _speed;
 export const getSpeed = () => _speed;
 
 export function initUI({ onPlay, onRestart }) {
   // Speed slider
   const speedSlider = document.getElementById('speed-slider');
   const speedVal    = document.getElementById('speed-val');
-  speedVal.textContent = speedSlider.value;
+  _speed = Number(speedSlider.value);
+  speedVal.textContent = _speed;
   speedSlider.addEventListener('input', (e) => {
     _speed = Number(e.target.value);
     speedVal.textContent = _speed;
@@ -89,11 +91,26 @@ function _bindSetting(sliderId, valId, onChange, format = v => v) {
   const slider = document.getElementById(sliderId);
   const label  = document.getElementById(valId);
   label.textContent = format(Number(slider.value));
+  onChange(Number(slider.value));
   slider.addEventListener('input', (e) => {
     const v = Number(e.target.value);
     label.textContent = format(v);
     onChange(v);
   });
+}
+
+const _inspectCard = document.getElementById('inspect-card');
+
+export function updateInspectCard(inspected) {
+  if (!inspected) {
+    _inspectCard.classList.remove('visible');
+    return;
+  }
+  const lines = inspectLines(inspected);
+  _inspectCard.innerHTML = lines.map((l, i) =>
+    `<div class="${i === 0 ? 'ic-title' : i === lines.length - 1 ? 'ic-dim' : 'ic-row'}" style="color:${l.color}">${l.text}</div>`
+  ).join('');
+  _inspectCard.classList.add('visible');
 }
 
 export function updateUI({ prey = 0, predators = 0, grass = 0, tick = 0 } = {}) {

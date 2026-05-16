@@ -1,5 +1,5 @@
 import { initCanvas, drawFrame } from './rendering/canvas.js';
-import { initUI, updateUI, getSpeed } from './rendering/ui.js';
+import { initUI, updateUI, updateInspectCard, getSpeed } from './rendering/ui.js';
 import { Simulation } from './simulation.js';
 import { drawGraph } from './rendering/graph.js';
 
@@ -51,6 +51,10 @@ canvasEl.addEventListener('click', (e) => {
 
   let best = null, bestD2 = Infinity;
 
+  for (const d of sim.predators) {
+    const d2 = (d.x - mx) ** 2 + (d.y - my) ** 2;
+    if (d2 < PREY_R2 && d2 < bestD2) { best = { type: 'predator', entity: d }; bestD2 = d2; }
+  }
   for (const p of sim.prey) {
     const d2 = (p.x - mx) ** 2 + (p.y - my) ** 2;
     if (d2 < PREY_R2 && d2 < bestD2) { best = { type: 'prey', entity: p }; bestD2 = d2; }
@@ -66,13 +70,15 @@ canvasEl.addEventListener('click', (e) => {
 
 function loop() {
   // Clear stale inspected refs
-  if (inspected?.type === 'prey'  && inspected.entity.dead)       inspected = null;
-  if (inspected?.type === 'grass' && inspected.entity.amount <= 0) inspected = null;
+  if (inspected?.type === 'prey'     && inspected.entity.dead)       inspected = null;
+  if (inspected?.type === 'predator' && inspected.entity.dead)       inspected = null;
+  if (inspected?.type === 'grass'    && inspected.entity.amount <= 0) inspected = null;
 
   if (!paused) sim.update(getSpeed() / 5);
   drawFrame(ctx, w, h, sim, inspected);
   drawGraph(graphCanvas, sim.graphHistory);
   updateUI(sim.stats());
+  updateInspectCard(inspected);
   requestAnimationFrame(loop);
 }
 

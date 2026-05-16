@@ -6,7 +6,7 @@ export const PRED_SCAN_INTERVAL   = 25;
 export const PRED_WANDER_TURN     = 0.05;
 export const PRED_SEEK_TURN       = 0.15;
 export const PRED_KILL_RADIUS     = 12;
-export const HUNT_ENERGY_GAIN     = 0.6;  // fraction of prey energy gained on kill
+export const HUNT_ENERGY_GAIN     = 0.45; // fraction of prey energy gained on kill
 
 export const PRED_EAT_TICKS = 80;  // ticks spent feeding after a kill
 
@@ -22,7 +22,7 @@ export class Predator {
     this.x            = x;
     this.y            = y;
     this.angle        = angle;
-    this.energy       = 60;
+    this.energy       = 80;
     this.age          = 0;
     this.sex          = Math.random() < 0.5 ? 'M' : 'F';
     this.state        = PRED_STATE.WANDER;

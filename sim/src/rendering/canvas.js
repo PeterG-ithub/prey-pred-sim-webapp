@@ -155,30 +155,12 @@ function drawInspect(ctx, { type, entity }, W, H) {
   ctx.stroke();
   ctx.setLineDash([]);
 
-  // Info card
-  const lines = type === 'prey' ? _preyLines(entity)
-              : type === 'predator' ? _predLines(entity)
-              : _grassLines(entity);
-  const PAD = 9, LH = 15, CW = 148;
-  const CH  = PAD * 2 + lines.length * LH;
-  let cx = ex + 16, cy = ey - CH / 2;
-  if (cx + CW > W - 8)  cx = ex - CW - 16;
-  if (cy < 8)            cy = 8;
-  if (cy + CH > H - 8)  cy = H - CH - 8;
+}
 
-  ctx.fillStyle = 'rgba(8, 8, 18, 0.92)';
-  ctx.strokeStyle = 'rgba(255,255,255,0.12)';
-  ctx.lineWidth = 1;
-  _roundRect(ctx, cx, cy, CW, CH, 5);
-  ctx.fill(); ctx.stroke();
-
-  for (let i = 0; i < lines.length; i++) {
-    const { text, color } = lines[i];
-    ctx.fillStyle  = color;
-    ctx.font       = i === 0 ? 'bold 11px "Courier New",monospace' : '10px "Courier New",monospace';
-    ctx.textBaseline = 'top';
-    ctx.fillText(text, cx + PAD, cy + PAD + i * LH);
-  }
+export function inspectLines({ type, entity }) {
+  return type === 'prey'     ? _preyLines(entity)
+       : type === 'predator' ? _predLines(entity)
+       : _grassLines(entity);
 }
 
 function _preyLines(p) {
@@ -224,12 +206,3 @@ function _bar(frac, cells) {
   return '█'.repeat(filled) + '░'.repeat(cells - filled);
 }
 
-function _roundRect(ctx, x, y, w, h, r) {
-  ctx.beginPath();
-  ctx.moveTo(x + r, y);
-  ctx.arcTo(x + w, y,     x + w, y + h, r);
-  ctx.arcTo(x + w, y + h, x,     y + h, r);
-  ctx.arcTo(x,     y + h, x,     y,     r);
-  ctx.arcTo(x,     y,     x + w, y,     r);
-  ctx.closePath();
-}
