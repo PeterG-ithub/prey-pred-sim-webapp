@@ -13,8 +13,10 @@ export function drawFrame(ctx, width, height, sim) {
   ctx.fillStyle = BG_COLOR;
   ctx.fillRect(0, 0, width, height);
 
-  // Grass
-  if (sim) drawGrass(ctx, sim.grass);
+  if (sim) {
+    drawGrass(ctx, sim.grass);
+    drawPrey(ctx, sim.prey);
+  }
 
   // Grid overlay (on top so it stays readable)
   ctx.strokeStyle = GRID_COLOR;
@@ -31,24 +33,42 @@ export function drawFrame(ctx, width, height, sim) {
   ctx.stroke();
 }
 
+function drawPrey(ctx, prey) {
+  const BODY_R    = 5;
+  const LINE_LEN  = 9;
+  const BODY_COLOR = '#60a5fa';
+  const LINE_COLOR = '#93c5fd';
+
+  for (const p of prey) {
+    const tipX = p.x + Math.cos(p.angle) * LINE_LEN;
+    const tipY = p.y + Math.sin(p.angle) * LINE_LEN;
+
+    // Direction line
+    ctx.strokeStyle = LINE_COLOR;
+    ctx.lineWidth   = 1.5;
+    ctx.beginPath();
+    ctx.moveTo(p.x, p.y);
+    ctx.lineTo(tipX, tipY);
+    ctx.stroke();
+
+    // Body
+    ctx.fillStyle = BODY_COLOR;
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, BODY_R, 0, Math.PI * 2);
+    ctx.fill();
+  }
+}
+
 function drawGrass(ctx, patches) {
   for (const g of patches) {
-    const t    = g.amount;                  // 0 → 1
-    const r    = 5 + t * 20;               // radius 5 → 25
-    const glow = 8 + t * 20;               // glow 8 → 28
+    const t = g.amount;
+    const r = 3 + t * 7;                          // radius 3 → 10
+    const lightness = Math.round(22 + t * 28);    // 22% (dark) → 50% (bright)
+    const alpha     = 0.4 + t * 0.6;              // 0.4 → 1.0
 
-    const grad = ctx.createRadialGradient(g.x, g.y, 0, g.x, g.y, r);
-    grad.addColorStop(0,   `rgba(167, 243, 186, ${0.55 + t * 0.45})`);
-    grad.addColorStop(0.45, `rgba(74,  222, 128, ${0.4  + t * 0.4})`);
-    grad.addColorStop(1,   'rgba(22, 101, 52, 0)');
-
-    ctx.save();
-    ctx.shadowBlur  = glow;
-    ctx.shadowColor = `rgba(74, 222, 128, ${0.25 + t * 0.35})`;
-    ctx.fillStyle   = grad;
+    ctx.fillStyle = `hsla(135, 60%, ${lightness}%, ${alpha})`;
     ctx.beginPath();
     ctx.arc(g.x, g.y, r, 0, Math.PI * 2);
     ctx.fill();
-    ctx.restore();
   }
 }

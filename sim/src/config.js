@@ -1,8 +1,11 @@
 export const config = {
-  initialGrass: 65,   // patches spawned on start/restart
-  growthSpeed:  5,    // 1–10 scale
-  spreadSpeed:  5,    // 1–10 scale
-  maxPatches:   200,  // hard cap on simultaneous patches
+  // Grass
+  initialGrass: 65,
+  growthSpeed:  5,
+  spreadSpeed:  5,
+  maxPatches:   200,
+  // Prey
+  initialPrey:  20,
 };
 
 export const toGrowthRate   = (s) => s * 0.0005;   // 5 → 0.0025

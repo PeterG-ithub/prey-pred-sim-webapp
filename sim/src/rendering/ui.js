@@ -39,7 +39,7 @@ export function initUI({ onPlay, onRestart }) {
     wrapper.classList.toggle('panel-open', open);
   }
 
-  btnOpen.addEventListener('click',  () => togglePanel(true));
+  btnOpen.addEventListener('click',  () => togglePanel(!panel.classList.contains('open')));
   btnClose.addEventListener('click', () => togglePanel(false));
 
   // Settings sliders
@@ -47,6 +47,7 @@ export function initUI({ onPlay, onRestart }) {
   _bindSetting('set-growth-speed',  'val-growth-speed',  (v) => { config.growthSpeed  = v; });
   _bindSetting('set-spread-speed',  'val-spread-speed',  (v) => { config.spreadSpeed  = v; });
   _bindSetting('set-max-patches',   'val-max-patches',   (v) => { config.maxPatches   = v; });
+  _bindSetting('set-initial-prey',  'val-initial-prey',  (v) => { config.initialPrey  = v; });
 }
 
 function _bindSetting(sliderId, valId, onChange) {

@@ -35,7 +35,7 @@
         position: fixed;
         top: 14px;
         right: 16px;
-        z-index: 20;
+        z-index: 10;
         background: var(--surface);
         border: 1px solid var(--border);
         color: var(--text);
@@ -83,7 +83,7 @@
         border-left: 1.5px solid var(--border);
         transform: translateX(100%);
         transition: transform 0.3s ease;
-        z-index: 15;
+        z-index: 20;
         display: flex;
         flex-direction: column;
         overflow: hidden;
@@ -333,6 +333,19 @@
               <span class="setting-val" id="val-max-patches">200</span>
             </div>
             <input class="setting-slider" type="range" id="set-max-patches" min="50" max="500" step="10" value="200" />
+          </div>
+        </div>
+
+        <div class="settings-section">
+          <h3>Prey</h3>
+
+          <div class="setting-row">
+            <div class="setting-label">
+              Initial count
+              <span class="setting-val" id="val-initial-prey">20</span>
+            </div>
+            <input class="setting-slider" type="range" id="set-initial-prey" min="1" max="100" value="20" />
+            <span class="setting-note">Takes effect on restart</span>
           </div>
         </div>
 
