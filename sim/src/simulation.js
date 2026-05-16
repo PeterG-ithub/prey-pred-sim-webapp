@@ -83,7 +83,7 @@ export class Simulation {
         const nx    = g.x + Math.cos(angle) * dist;
         const ny    = g.y + Math.sin(angle) * dist;
         if (nx > 0 && nx < this.width && ny > 0 && ny < this.height) {
-          if (this._clearZone(nx, ny, newBatch)) newBatch.push(new Grass(nx, ny, 0.05));
+          if (this._clearZone(nx, ny, newBatch)) newBatch.push(new Grass(nx, ny, 0.1));
         }
       }
     }
@@ -92,13 +92,15 @@ export class Simulation {
       this.grass.length + newBatch.length < max &&
       Math.random() < toRandomSpawn(config.grassRandomSpawn) * speedMult
     ) {
-      const x = Math.random() * this.width;
-      const y = Math.random() * this.height;
-      newBatch.push(new Grass(x, y, 0.05));
+      newBatch.push(new Grass(
+        Math.random() * this.width,
+        Math.random() * this.height,
+        0.1,
+      ));
     }
 
     for (const g of newBatch) this.grass.push(g);
-    this.grass = this.grass.filter(g => g.amount > ABANDON_AMOUNT);
+    this.grass = this.grass.filter(g => g.amount > 0);
   }
 
   _clearZone(x, y, extras = []) {
@@ -144,7 +146,7 @@ export class Simulation {
           this._stateEat(p, speedMult, eatRate, satiationE);
           break;
         case STATE.SEEK_MATE:
-          this._stateSeekMate(p, speedMult, speed, hungerE, mateRadius, newborns, repoCooldownTicks);
+          this._stateSeekMate(p, speedMult, speed, hungerE, satiationE, mateRadius, newborns, repoCooldownTicks);
           break;
       }
     }
@@ -225,7 +227,7 @@ export class Simulation {
     p.energy = Math.min(MAX_ENERGY, p.energy + bite * ENERGY_PER_BITE);
   }
 
-  _stateSeekMate(p, speedMult, speed, hungerE, mateRadius, newborns, repoCooldownTicks) {
+  _stateSeekMate(p, speedMult, speed, hungerE, satiationE, mateRadius, newborns, repoCooldownTicks) {
     if (p.energy < hungerE) {
       p.targetMate = null; p.state = STATE.WANDER; return;
     }
@@ -244,7 +246,7 @@ export class Simulation {
 
     p.angle = _lerpAngle(p.angle, Math.atan2(dy, dx), SEEK_TURN * speedMult);
     this._moveAndBounce(p, speed, speedMult);
-    this._tryOpportunisticEat(p);
+    if (p.energy < satiationE) this._tryOpportunisticEat(p);
   }
 
   _tryOpportunisticEat(p) {
