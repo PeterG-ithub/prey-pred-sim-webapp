@@ -1,7 +1,9 @@
 import { Grass } from './entities/grass.js';
-import { Prey, LIFESPAN, ADULT_AGE, METABOLISM, MAX_ENERGY, EAT_RADIUS,
-         SENSE_RADIUS, EAT_RATE, ENERGY_PER_BITE, REPRO_ENERGY,
-         REPRO_COST, REPRO_COOLDOWN, WANDER_TURN, SEEK_TURN, PREY_SPEED } from './entities/prey.js';
+import { Prey, STATE, LIFESPAN, ADULT_AGE, METABOLISM, MAX_ENERGY,
+         EAT_RADIUS, SENSE_RADIUS, EAT_RATE, ENERGY_PER_BITE,
+         REPRO_ENERGY, REPRO_COST, REPRO_COOLDOWN,
+         WANDER_TURN, SEEK_TURN, PREY_SPEED,
+         SCAN_INTERVAL, MATE_RADIUS, ABANDON_AMOUNT } from './entities/prey.js';
 import { config, toGrowthRate, toSpreadChance } from './config.js';
 
 const SPREAD_THRESHOLD    = 0.85;
@@ -67,9 +69,7 @@ export class Simulation {
         const nx    = g.x + Math.cos(angle) * dist;
         const ny    = g.y + Math.sin(angle) * dist;
         if (nx > 0 && nx < this.width && ny > 0 && ny < this.height) {
-          if (this._clearZone(nx, ny, newBatch)) {
-            newBatch.push(new Grass(nx, ny, 0.05));
-          }
+          if (this._clearZone(nx, ny, newBatch)) newBatch.push(new Grass(nx, ny, 0.05));
         }
       }
     }
@@ -80,9 +80,7 @@ export class Simulation {
     ) {
       const x = Math.random() * this.width;
       const y = Math.random() * this.height;
-      if (this._clearZone(x, y, newBatch)) {
-        newBatch.push(new Grass(x, y, 0.05));
-      }
+      if (this._clearZone(x, y, newBatch)) newBatch.push(new Grass(x, y, 0.05));
     }
 
     for (const g of newBatch) this.grass.push(g);
@@ -100,7 +98,7 @@ export class Simulation {
     return true;
   }
 
-  // ── Prey ──────────────────────────────────────────────────────────────
+  // ── Prey state machine ────────────────────────────────────────────────
   _updatePrey(speedMult) {
     const newborns = [];
 
@@ -111,44 +109,16 @@ export class Simulation {
 
       if (p.energy <= 0 || p.age > LIFESPAN) { p.dead = true; continue; }
 
-      // Find nearest grass within sense radius
-      const target = this._nearestGrass(p.x, p.y, SENSE_RADIUS);
-
-      if (target) {
-        // Steer toward grass
-        const desired = Math.atan2(target.y - p.y, target.x - p.x);
-        p.angle       = _lerpAngle(p.angle, desired, SEEK_TURN * speedMult);
-
-        // Eat if close enough
-        const dist2 = (target.x - p.x) ** 2 + (target.y - p.y) ** 2;
-        if (dist2 < EAT_RADIUS * EAT_RADIUS) {
-          const bite   = Math.min(target.amount, EAT_RATE * speedMult);
-          target.amount -= bite;
-          p.energy = Math.min(MAX_ENERGY, p.energy + bite * ENERGY_PER_BITE);
-        }
-      } else {
-        // Wander
-        p.angle += (Math.random() - 0.5) * 2 * WANDER_TURN * speedMult;
+      switch (p.state) {
+        case STATE.WANDER: this._stateWander(p, speedMult); break;
+        case STATE.SEEK:   this._stateSeek(p, speedMult);   break;
+        case STATE.EAT:    this._stateEat(p, speedMult);    break;
       }
 
-      // Move
-      p.x += Math.cos(p.angle) * PREY_SPEED * speedMult;
-      p.y += Math.sin(p.angle) * PREY_SPEED * speedMult;
-
-      // Bounce off walls
-      if (p.x < 0)           { p.x = 0;           p.angle = Math.PI - p.angle; }
-      if (p.x > this.width)  { p.x = this.width;  p.angle = Math.PI - p.angle; }
-      if (p.y < 0)           { p.y = 0;            p.angle = -p.angle; }
-      if (p.y > this.height) { p.y = this.height;  p.angle = -p.angle; }
-
-      // Reproduce
+      // Reproduction — checked regardless of state
       if (p.age > ADULT_AGE && p.energy > REPRO_ENERGY && p.repCooldown <= 0) {
-        p.energy      -= REPRO_COST;
-        p.repCooldown  = REPRO_COOLDOWN;
-        newborns.push(new Prey(
-          p.x + (Math.random() - 0.5) * 20,
-          p.y + (Math.random() - 0.5) * 20,
-        ));
+        const partner = this._findMate(p);
+        if (partner) this._reproduce(p, partner, newborns);
       }
     }
 
@@ -156,11 +126,92 @@ export class Simulation {
     for (const nb of newborns) this.prey.push(nb);
   }
 
+  _stateWander(p, speedMult) {
+    p.scanCooldown -= speedMult;
+    if (p.scanCooldown <= 0) {
+      p.scanCooldown = SCAN_INTERVAL;
+      const target = this._nearestGrass(p.x, p.y, SENSE_RADIUS);
+      if (target) { p.targetGrass = target; p.state = STATE.SEEK; return; }
+    }
+    p.angle += (Math.random() - 0.5) * 2 * WANDER_TURN * speedMult;
+    this._moveAndBounce(p, speedMult);
+  }
+
+  _stateSeek(p, speedMult) {
+    if (!p.targetGrass || p.targetGrass.amount <= ABANDON_AMOUNT) {
+      p.targetGrass = null;
+      p.state = STATE.WANDER;
+      return;
+    }
+    const dx    = p.targetGrass.x - p.x;
+    const dy    = p.targetGrass.y - p.y;
+    const dist2 = dx * dx + dy * dy;
+
+    if (dist2 < EAT_RADIUS * EAT_RADIUS) { p.state = STATE.EAT; return; }
+
+    p.angle = _lerpAngle(p.angle, Math.atan2(dy, dx), SEEK_TURN * speedMult);
+    this._moveAndBounce(p, speedMult);
+  }
+
+  _stateEat(p, speedMult) {
+    if (!p.targetGrass || p.targetGrass.amount <= 0) {
+      p.targetGrass = null;
+      p.state = STATE.WANDER;
+      return;
+    }
+    // Drift out of eat radius → re-seek
+    const dist2 = (p.targetGrass.x - p.x) ** 2 + (p.targetGrass.y - p.y) ** 2;
+    if (dist2 > (EAT_RADIUS * 2.5) ** 2) { p.state = STATE.SEEK; return; }
+
+    // Eat — prey stays still
+    const bite     = Math.min(p.targetGrass.amount, EAT_RATE * speedMult);
+    p.targetGrass.amount -= bite;
+    p.energy = Math.min(MAX_ENERGY, p.energy + bite * ENERGY_PER_BITE);
+  }
+
+  _moveAndBounce(p, speedMult) {
+    p.x += Math.cos(p.angle) * PREY_SPEED * speedMult;
+    p.y += Math.sin(p.angle) * PREY_SPEED * speedMult;
+    if (p.x < 0)           { p.x = 0;           p.angle = Math.PI - p.angle; }
+    if (p.x > this.width)  { p.x = this.width;  p.angle = Math.PI - p.angle; }
+    if (p.y < 0)           { p.y = 0;            p.angle = -p.angle; }
+    if (p.y > this.height) { p.y = this.height;  p.angle = -p.angle; }
+  }
+
+  // ── Mating ────────────────────────────────────────────────────────────
+  _findMate(p) {
+    const r2 = MATE_RADIUS * MATE_RADIUS;
+    for (const other of this.prey) {
+      if (other === p || other.dead || other.sex === p.sex) continue;
+      if (other.age <= ADULT_AGE || other.energy <= REPRO_ENERGY * 0.7) continue;
+      if ((other.x - p.x) ** 2 + (other.y - p.y) ** 2 < r2) return other;
+    }
+    return null;
+  }
+
+  _reproduce(p, partner, newborns) {
+    const female = p.sex === 'F' ? p : partner;
+    const male   = p.sex === 'M' ? p : partner;
+
+    female.energy      -= REPRO_COST;
+    female.repCooldown  = REPRO_COOLDOWN;
+    male.repCooldown    = REPRO_COOLDOWN * 0.5;
+
+    const count = 1 + (Math.random() < 0.3 ? 1 : 0); // 1 offspring, 30% chance of twins
+    for (let i = 0; i < count; i++) {
+      newborns.push(new Prey(
+        female.x + (Math.random() - 0.5) * 20,
+        female.y + (Math.random() - 0.5) * 20,
+      ));
+    }
+  }
+
+  // ── Lookup helpers ────────────────────────────────────────────────────
   _nearestGrass(x, y, radius) {
     const r2 = radius * radius;
-    let best = null;
-    let bestD2 = Infinity;
+    let best = null, bestD2 = Infinity;
     for (const g of this.grass) {
+      if (g.amount <= ABANDON_AMOUNT) continue;
       const d2 = (g.x - x) ** 2 + (g.y - y) ** 2;
       if (d2 < r2 && d2 < bestD2) { best = g; bestD2 = d2; }
     }
@@ -169,19 +220,13 @@ export class Simulation {
 
   // ── Stats ─────────────────────────────────────────────────────────────
   stats() {
-    return {
-      grass:     this.grass.length,
-      prey:      this.prey.length,
-      predators: 0,
-      tick:      this.tick,
-    };
+    return { grass: this.grass.length, prey: this.prey.length, predators: 0, tick: this.tick };
   }
 }
 
-// ── Helpers ───────────────────────────────────────────────────────────────
 function _lerpAngle(a, b, t) {
-  let diff = b - a;
-  while (diff >  Math.PI) diff -= 2 * Math.PI;
-  while (diff < -Math.PI) diff += 2 * Math.PI;
-  return a + diff * Math.min(1, t);
+  let d = b - a;
+  while (d >  Math.PI) d -= 2 * Math.PI;
+  while (d < -Math.PI) d += 2 * Math.PI;
+  return a + d * Math.min(1, t);
 }

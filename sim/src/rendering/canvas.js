@@ -34,25 +34,25 @@ export function drawFrame(ctx, width, height, sim) {
 }
 
 function drawPrey(ctx, prey) {
-  const BODY_R    = 5;
-  const LINE_LEN  = 9;
-  const BODY_COLOR = '#60a5fa';
-  const LINE_COLOR = '#93c5fd';
+  const BODY_R   = 5;
+  const LINE_LEN = 9;
 
   for (const p of prey) {
+    const isMale   = p.sex === 'M';
+    const bodyColor = isMale ? '#60a5fa' : '#f472b6';
+    const lineColor = isMale ? '#93c5fd' : '#f9a8d4';
+
     const tipX = p.x + Math.cos(p.angle) * LINE_LEN;
     const tipY = p.y + Math.sin(p.angle) * LINE_LEN;
 
-    // Direction line
-    ctx.strokeStyle = LINE_COLOR;
+    ctx.strokeStyle = lineColor;
     ctx.lineWidth   = 1.5;
     ctx.beginPath();
     ctx.moveTo(p.x, p.y);
     ctx.lineTo(tipX, tipY);
     ctx.stroke();
 
-    // Body
-    ctx.fillStyle = BODY_COLOR;
+    ctx.fillStyle = bodyColor;
     ctx.beginPath();
     ctx.arc(p.x, p.y, BODY_R, 0, Math.PI * 2);
     ctx.fill();
