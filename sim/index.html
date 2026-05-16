@@ -340,12 +340,56 @@
           <h3>Prey</h3>
 
           <div class="setting-row">
-            <div class="setting-label">
-              Initial count
-              <span class="setting-val" id="val-initial-prey">20</span>
-            </div>
+            <div class="setting-label">Initial count <span class="setting-val" id="val-initial-prey">20</span></div>
             <input class="setting-slider" type="range" id="set-initial-prey" min="1" max="100" value="20" />
             <span class="setting-note">Takes effect on restart</span>
+          </div>
+
+          <div class="setting-row">
+            <div class="setting-label">Satiation threshold <span class="setting-val" id="val-prey-satiation">90%</span></div>
+            <input class="setting-slider" type="range" id="set-prey-satiation" min="50" max="100" value="90" />
+            <span class="setting-note">Stop eating &amp; seek mate above this energy</span>
+          </div>
+
+          <div class="setting-row">
+            <div class="setting-label">Hunger threshold <span class="setting-val" id="val-prey-hunger">60%</span></div>
+            <input class="setting-slider" type="range" id="set-prey-hunger" min="10" max="80" value="60" />
+            <span class="setting-note">Abandon mate-seeking below this energy</span>
+          </div>
+
+          <div class="setting-row">
+            <div class="setting-label">Perception radius <span class="setting-val" id="val-prey-perception">100px</span></div>
+            <input class="setting-slider" type="range" id="set-prey-perception" min="30" max="200" step="5" value="100" />
+          </div>
+
+          <div class="setting-row">
+            <div class="setting-label">Speed <span class="setting-val" id="val-prey-speed">5</span></div>
+            <input class="setting-slider" type="range" id="set-prey-speed" min="1" max="10" value="5" />
+          </div>
+
+          <div class="setting-row">
+            <div class="setting-label">Metabolism <span class="setting-val" id="val-prey-metabolism">5</span></div>
+            <input class="setting-slider" type="range" id="set-prey-metabolism" min="1" max="10" value="5" />
+          </div>
+
+          <div class="setting-row">
+            <div class="setting-label">Lifespan <span class="setting-val" id="val-prey-lifespan">30 yrs</span></div>
+            <input class="setting-slider" type="range" id="set-prey-lifespan" min="5" max="100" step="5" value="30" />
+          </div>
+
+          <div class="setting-row">
+            <div class="setting-label">Repro cooldown <span class="setting-val" id="val-prey-repo-cooldown">4 yrs</span></div>
+            <input class="setting-slider" type="range" id="set-prey-repo-cooldown" min="1" max="20" value="4" />
+          </div>
+
+          <div class="setting-row">
+            <div class="setting-label">Eat rate <span class="setting-val" id="val-prey-eat-rate">5</span></div>
+            <input class="setting-slider" type="range" id="set-prey-eat-rate" min="1" max="10" value="5" />
+          </div>
+
+          <div class="setting-row">
+            <div class="setting-label">Mate radius <span class="setting-val" id="val-prey-mate-radius">25px</span></div>
+            <input class="setting-slider" type="range" id="set-prey-mate-radius" min="10" max="60" step="5" value="25" />
           </div>
         </div>
 

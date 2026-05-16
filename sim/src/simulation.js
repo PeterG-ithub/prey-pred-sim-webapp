@@ -1,23 +1,26 @@
 import { Grass } from './entities/grass.js';
-import { Prey, STATE, LIFESPAN, ADULT_AGE, METABOLISM, MAX_ENERGY,
-         EAT_RADIUS, SENSE_RADIUS, EAT_RATE, ENERGY_PER_BITE,
-         REPRO_ENERGY, REPRO_COST, REPRO_COOLDOWN,
-         WANDER_TURN, SEEK_TURN, PREY_SPEED,
-         SCAN_INTERVAL, MATE_RADIUS, ABANDON_AMOUNT } from './entities/prey.js';
-import { config, toGrowthRate, toSpreadChance } from './config.js';
+import { Prey, STATE, TICKS_PER_YEAR, ADULT_AGE, MAX_ENERGY,
+         ENERGY_PER_BITE, REPRO_COST, ABANDON_AMOUNT,
+         SCAN_INTERVAL, WANDER_TURN, SEEK_TURN } from './entities/prey.js';
+import { config, toGrowthRate, toSpreadChance,
+         toPreySpeed, toMetabolism, toEatRate } from './config.js';
+import { SpatialGrid } from './utils/spatialGrid.js';
 
 const SPREAD_THRESHOLD    = 0.85;
 const SPREAD_RADIUS       = 80;
 const RANDOM_SPAWN_CHANCE = 0.004;
 const MIN_PATCH_DIST      = 28;
+const EAT_RADIUS          = 12;
 
 export class Simulation {
   constructor(width, height) {
-    this.width  = width;
-    this.height = height;
-    this.grass  = [];
-    this.prey   = [];
-    this.tick   = 0;
+    this.width     = width;
+    this.height    = height;
+    this.grass     = [];
+    this.prey      = [];
+    this.tick      = 0;
+    this._grassGrid = new SpatialGrid(100);
+    this._preyGrid  = new SpatialGrid(100);
     this._initGrass();
     this._initPrey();
   }
@@ -46,7 +49,15 @@ export class Simulation {
   update(speedMult = 1) {
     this.tick++;
     this._updateGrass(speedMult);
+    this._rebuildGrids();
     this._updatePrey(speedMult);
+  }
+
+  _rebuildGrids() {
+    this._grassGrid.clear();
+    for (const g of this.grass) this._grassGrid.insert(g);
+    this._preyGrid.clear();
+    for (const p of this.prey) this._preyGrid.insert(p);
   }
 
   // ── Grass ─────────────────────────────────────────────────────────────
@@ -100,25 +111,38 @@ export class Simulation {
 
   // ── Prey state machine ────────────────────────────────────────────────
   _updatePrey(speedMult) {
+    const satiationE = config.preySatiation * MAX_ENERGY / 100;
+    const hungerE    = config.preyHunger    * MAX_ENERGY / 100;
+    const lifespan   = config.preyLifespan  * TICKS_PER_YEAR;
+    const repoCooldownTicks = config.preyRepoCooldown * TICKS_PER_YEAR;
+    const metabolism = toMetabolism(config.preyMetabolism);
+    const eatRate    = toEatRate(config.preyEatRate);
+    const speed      = toPreySpeed(config.preySpeed);
+    const perception = config.preyPerception;
+    const mateRadius = config.preyMateRadius;
+
     const newborns = [];
 
     for (const p of this.prey) {
       p.age         += speedMult;
-      p.energy      -= METABOLISM * speedMult;
+      p.energy      -= metabolism * speedMult;
       p.repCooldown -= speedMult;
 
-      if (p.energy <= 0 || p.age > LIFESPAN) { p.dead = true; continue; }
+      if (p.energy <= 0 || p.age > lifespan) { p.dead = true; continue; }
 
       switch (p.state) {
-        case STATE.WANDER: this._stateWander(p, speedMult); break;
-        case STATE.SEEK:   this._stateSeek(p, speedMult);   break;
-        case STATE.EAT:    this._stateEat(p, speedMult);    break;
-      }
-
-      // Reproduction — checked regardless of state
-      if (p.age > ADULT_AGE && p.energy > REPRO_ENERGY && p.repCooldown <= 0) {
-        const partner = this._findMate(p);
-        if (partner) this._reproduce(p, partner, newborns);
+        case STATE.WANDER:
+          this._stateWander(p, speedMult, speed, satiationE, hungerE, perception, repoCooldownTicks);
+          break;
+        case STATE.SEEK_FOOD:
+          this._stateSeekFood(p, speedMult, speed, eatRate, satiationE);
+          break;
+        case STATE.EAT:
+          this._stateEat(p, speedMult, eatRate, satiationE);
+          break;
+        case STATE.SEEK_MATE:
+          this._stateSeekMate(p, speedMult, speed, hungerE, mateRadius, newborns, repoCooldownTicks);
+          break;
       }
     }
 
@@ -126,96 +150,112 @@ export class Simulation {
     for (const nb of newborns) this.prey.push(nb);
   }
 
-  _stateWander(p, speedMult) {
+  _stateWander(p, speedMult, speed, satiationE, hungerE, perception, repoCooldownTicks) {
     p.scanCooldown -= speedMult;
-    if (p.scanCooldown <= 0) {
-      p.scanCooldown = SCAN_INTERVAL;
-      const target = this._nearestGrass(p.x, p.y, SENSE_RADIUS);
-      if (target) { p.targetGrass = target; p.state = STATE.SEEK; return; }
+    if (p.scanCooldown > 0) {
+      p.angle += (Math.random() - 0.5) * 2 * WANDER_TURN * speedMult;
+      this._moveAndBounce(p, speed, speedMult);
+      return;
     }
+    p.scanCooldown = SCAN_INTERVAL;
+
+    if (p.energy < hungerE || p.energy < satiationE) {
+      // Hungry — seek food
+      const g = this._grassGrid.nearest(p.x, p.y, perception, g => g.amount > ABANDON_AMOUNT);
+      if (g) { p.targetGrass = g; p.state = STATE.SEEK_FOOD; return; }
+    }
+
+    if (p.energy >= satiationE && p.age > ADULT_AGE && p.repCooldown <= 0) {
+      // Full and ready — seek mate
+      const mate = this._preyGrid.nearest(p.x, p.y, perception, m =>
+        m !== p && !m.dead && m.sex !== p.sex &&
+        m.age > ADULT_AGE && m.energy > hungerE,
+      );
+      if (mate) { p.targetMate = mate; p.state = STATE.SEEK_MATE; return; }
+    }
+
     p.angle += (Math.random() - 0.5) * 2 * WANDER_TURN * speedMult;
-    this._moveAndBounce(p, speedMult);
+    this._moveAndBounce(p, speed, speedMult);
   }
 
-  _stateSeek(p, speedMult) {
+  _stateSeekFood(p, speedMult, speed, eatRate, satiationE) {
     if (!p.targetGrass || p.targetGrass.amount <= ABANDON_AMOUNT) {
-      p.targetGrass = null;
-      p.state = STATE.WANDER;
-      return;
+      p.targetGrass = null; p.state = STATE.WANDER; return;
     }
-    const dx    = p.targetGrass.x - p.x;
-    const dy    = p.targetGrass.y - p.y;
-    const dist2 = dx * dx + dy * dy;
-
-    if (dist2 < EAT_RADIUS * EAT_RADIUS) { p.state = STATE.EAT; return; }
-
+    const dx = p.targetGrass.x - p.x;
+    const dy = p.targetGrass.y - p.y;
+    if (dx * dx + dy * dy < EAT_RADIUS * EAT_RADIUS) {
+      p.state = STATE.EAT; return;
+    }
     p.angle = _lerpAngle(p.angle, Math.atan2(dy, dx), SEEK_TURN * speedMult);
-    this._moveAndBounce(p, speedMult);
+    this._moveAndBounce(p, speed, speedMult);
   }
 
-  _stateEat(p, speedMult) {
+  _stateEat(p, speedMult, eatRate, satiationE) {
     if (!p.targetGrass || p.targetGrass.amount <= 0) {
-      p.targetGrass = null;
-      p.state = STATE.WANDER;
-      return;
+      p.targetGrass = null; p.state = STATE.WANDER; return;
     }
-    // Drift out of eat radius → re-seek
-    const dist2 = (p.targetGrass.x - p.x) ** 2 + (p.targetGrass.y - p.y) ** 2;
-    if (dist2 > (EAT_RADIUS * 2.5) ** 2) { p.state = STATE.SEEK; return; }
+    if (p.energy >= satiationE) {
+      p.state = STATE.WANDER; return;
+    }
+    // Drifted too far — re-approach
+    const d2 = (p.targetGrass.x - p.x) ** 2 + (p.targetGrass.y - p.y) ** 2;
+    if (d2 > (EAT_RADIUS * 2.5) ** 2) { p.state = STATE.SEEK_FOOD; return; }
 
-    // Eat — prey stays still
-    const bite     = Math.min(p.targetGrass.amount, EAT_RATE * speedMult);
+    const bite = Math.min(p.targetGrass.amount, eatRate * speedMult);
     p.targetGrass.amount -= bite;
     p.energy = Math.min(MAX_ENERGY, p.energy + bite * ENERGY_PER_BITE);
   }
 
-  _moveAndBounce(p, speedMult) {
-    p.x += Math.cos(p.angle) * PREY_SPEED * speedMult;
-    p.y += Math.sin(p.angle) * PREY_SPEED * speedMult;
+  _stateSeekMate(p, speedMult, speed, hungerE, mateRadius, newborns, repoCooldownTicks) {
+    if (p.energy < hungerE) {
+      p.targetMate = null; p.state = STATE.WANDER; return;
+    }
+    if (!p.targetMate || p.targetMate.dead) {
+      p.targetMate = null; p.state = STATE.WANDER; return;
+    }
+
+    const dx = p.targetMate.x - p.x;
+    const dy = p.targetMate.y - p.y;
+    const d2 = dx * dx + dy * dy;
+
+    if (d2 < mateRadius * mateRadius) {
+      this._reproduce(p, p.targetMate, newborns, hungerE, repoCooldownTicks);
+      p.targetMate = null; p.state = STATE.WANDER; return;
+    }
+
+    p.angle = _lerpAngle(p.angle, Math.atan2(dy, dx), SEEK_TURN * speedMult);
+    this._moveAndBounce(p, speed, speedMult);
+  }
+
+  _moveAndBounce(p, speed, speedMult) {
+    p.x += Math.cos(p.angle) * speed * speedMult;
+    p.y += Math.sin(p.angle) * speed * speedMult;
     if (p.x < 0)           { p.x = 0;           p.angle = Math.PI - p.angle; }
     if (p.x > this.width)  { p.x = this.width;  p.angle = Math.PI - p.angle; }
     if (p.y < 0)           { p.y = 0;            p.angle = -p.angle; }
     if (p.y > this.height) { p.y = this.height;  p.angle = -p.angle; }
   }
 
-  // ── Mating ────────────────────────────────────────────────────────────
-  _findMate(p) {
-    const r2 = MATE_RADIUS * MATE_RADIUS;
-    for (const other of this.prey) {
-      if (other === p || other.dead || other.sex === p.sex) continue;
-      if (other.age <= ADULT_AGE || other.energy <= REPRO_ENERGY * 0.7) continue;
-      if ((other.x - p.x) ** 2 + (other.y - p.y) ** 2 < r2) return other;
-    }
-    return null;
-  }
-
-  _reproduce(p, partner, newborns) {
+  _reproduce(p, partner, newborns, hungerE, repoCooldownTicks) {
     const female = p.sex === 'F' ? p : partner;
     const male   = p.sex === 'M' ? p : partner;
 
-    female.energy      -= REPRO_COST;
-    female.repCooldown  = REPRO_COOLDOWN;
-    male.repCooldown    = REPRO_COOLDOWN * 0.5;
+    // Validate partner still eligible
+    if (partner.energy < hungerE || partner.dead) return;
 
-    const count = 1 + (Math.random() < 0.3 ? 1 : 0); // 1 offspring, 30% chance of twins
+    female.energy      -= REPRO_COST;
+    female.repCooldown  = repoCooldownTicks;
+    male.repCooldown    = repoCooldownTicks * 0.5;
+
+    const twins = Math.random() < 0.3;
+    const count = twins ? 2 : 1;
     for (let i = 0; i < count; i++) {
       newborns.push(new Prey(
         female.x + (Math.random() - 0.5) * 20,
         female.y + (Math.random() - 0.5) * 20,
       ));
     }
-  }
-
-  // ── Lookup helpers ────────────────────────────────────────────────────
-  _nearestGrass(x, y, radius) {
-    const r2 = radius * radius;
-    let best = null, bestD2 = Infinity;
-    for (const g of this.grass) {
-      if (g.amount <= ABANDON_AMOUNT) continue;
-      const d2 = (g.x - x) ** 2 + (g.y - y) ** 2;
-      if (d2 < r2 && d2 < bestD2) { best = g; bestD2 = d2; }
-    }
-    return best;
   }
 
   // ── Stats ─────────────────────────────────────────────────────────────

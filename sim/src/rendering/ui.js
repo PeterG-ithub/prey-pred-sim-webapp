@@ -42,20 +42,31 @@ export function initUI({ onPlay, onRestart }) {
   btnOpen.addEventListener('click',  () => togglePanel(!panel.classList.contains('open')));
   btnClose.addEventListener('click', () => togglePanel(false));
 
-  // Settings sliders
+  // Grass settings
   _bindSetting('set-initial-grass', 'val-initial-grass', (v) => { config.initialGrass = v; });
   _bindSetting('set-growth-speed',  'val-growth-speed',  (v) => { config.growthSpeed  = v; });
   _bindSetting('set-spread-speed',  'val-spread-speed',  (v) => { config.spreadSpeed  = v; });
   _bindSetting('set-max-patches',   'val-max-patches',   (v) => { config.maxPatches   = v; });
-  _bindSetting('set-initial-prey',  'val-initial-prey',  (v) => { config.initialPrey  = v; });
+
+  // Prey settings
+  _bindSetting('set-initial-prey',       'val-initial-prey',       (v) => { config.initialPrey      = v; });
+  _bindSetting('set-prey-satiation',     'val-prey-satiation',     (v) => { config.preySatiation    = v; }, v => `${v}%`);
+  _bindSetting('set-prey-hunger',        'val-prey-hunger',        (v) => { config.preyHunger       = v; }, v => `${v}%`);
+  _bindSetting('set-prey-perception',    'val-prey-perception',    (v) => { config.preyPerception   = v; }, v => `${v}px`);
+  _bindSetting('set-prey-speed',         'val-prey-speed',         (v) => { config.preySpeed        = v; });
+  _bindSetting('set-prey-metabolism',    'val-prey-metabolism',    (v) => { config.preyMetabolism   = v; });
+  _bindSetting('set-prey-lifespan',      'val-prey-lifespan',      (v) => { config.preyLifespan     = v; }, v => `${v} yrs`);
+  _bindSetting('set-prey-repo-cooldown', 'val-prey-repo-cooldown', (v) => { config.preyRepoCooldown = v; }, v => `${v} yrs`);
+  _bindSetting('set-prey-eat-rate',      'val-prey-eat-rate',      (v) => { config.preyEatRate      = v; });
+  _bindSetting('set-prey-mate-radius',   'val-prey-mate-radius',   (v) => { config.preyMateRadius   = v; }, v => `${v}px`);
 }
 
-function _bindSetting(sliderId, valId, onChange) {
+function _bindSetting(sliderId, valId, onChange, format = v => v) {
   const slider = document.getElementById(sliderId);
   const label  = document.getElementById(valId);
   slider.addEventListener('input', (e) => {
     const v = Number(e.target.value);
-    label.textContent = v;
+    label.textContent = format(v);
     onChange(v);
   });
 }
