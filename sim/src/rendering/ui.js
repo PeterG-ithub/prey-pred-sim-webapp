@@ -52,6 +52,7 @@ export function initUI({ onPlay, onRestart }) {
   function toggleGraph(open) {
     graphPanel.classList.toggle('open', open);
     wrapper.classList.toggle('graph-open', open);
+    _inspectCard.classList.toggle('graph-open', open);
   }
   btnPanel.addEventListener('click',      () => toggleGraph(!graphPanel.classList.contains('open')));
   btnCloseGraph.addEventListener('click', () => toggleGraph(false));
