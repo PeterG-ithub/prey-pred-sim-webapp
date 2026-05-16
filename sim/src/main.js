@@ -13,9 +13,11 @@ function snap(n) {
 }
 
 function computeSize() {
-  const availW  = window.innerWidth  - PADDING;
-  const availH  = window.innerHeight - BAR_H - PADDING;
-  const aspect  = 4 / 3;
+  const panelOpen = document.getElementById('settings-panel').classList.contains('open');
+  const panelW    = panelOpen ? 290 : 0;
+  const availW    = window.innerWidth  - PADDING - panelW;
+  const availH    = window.innerHeight - BAR_H   - PADDING;
+  const aspect    = 4 / 3;
   let w = availW;
   let h = Math.round(w / aspect);
   if (h > availH) { h = availH; w = Math.round(h * aspect); }
@@ -25,12 +27,16 @@ function computeSize() {
 let { w, h } = computeSize();
 const ctx = initCanvas(canvasEl, w, h);
 
-const sim = new Simulation(w, h);
+let sim    = new Simulation(w, h);
+let paused = true;
 
-initUI();
+initUI({
+  onPlay:    () => { paused = !paused; },
+  onRestart: () => { sim = new Simulation(w, h); },
+});
 
 function loop() {
-  sim.update(getSpeed() / 5);
+  if (!paused) sim.update(getSpeed() / 5);
   drawFrame(ctx, w, h, sim);
   updateUI(sim.stats());
   requestAnimationFrame(loop);

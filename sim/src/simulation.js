@@ -1,13 +1,10 @@
 import { Grass } from './entities/grass.js';
+import { config, toGrowthRate, toSpreadChance } from './config.js';
 
-const GROWTH_RATE       = 0.0025;
-const SPREAD_THRESHOLD  = 0.85;
-const SPREAD_CHANCE     = 0.0018;
-const SPREAD_RADIUS     = 80;
+const SPREAD_THRESHOLD    = 0.85;
+const SPREAD_RADIUS       = 80;
 const RANDOM_SPAWN_CHANCE = 0.004;
-const MIN_PATCH_DIST    = 28;
-const MAX_PATCHES       = 200;
-const INITIAL_PATCHES   = 65;
+const MIN_PATCH_DIST      = 28;
 
 export class Simulation {
   constructor(width, height) {
@@ -19,7 +16,7 @@ export class Simulation {
   }
 
   _initGrass() {
-    for (let i = 0; i < INITIAL_PATCHES; i++) {
+    for (let i = 0; i < config.initialGrass; i++) {
       const x      = Math.random() * this.width;
       const y      = Math.random() * this.height;
       const amount = Math.random() * 0.75 + 0.05;
@@ -29,16 +26,18 @@ export class Simulation {
 
   update(speedMult = 1) {
     this.tick++;
-    const rate     = GROWTH_RATE * speedMult;
-    const newBatch = [];
+    const rate        = toGrowthRate(config.growthSpeed) * speedMult;
+    const spreadChance = toSpreadChance(config.spreadSpeed) * speedMult;
+    const max         = config.maxPatches;
+    const newBatch    = [];
 
     for (const g of this.grass) {
       g.amount = Math.min(1, g.amount + rate);
 
       if (
         g.amount >= SPREAD_THRESHOLD &&
-        this.grass.length + newBatch.length < MAX_PATCHES &&
-        Math.random() < SPREAD_CHANCE * speedMult
+        this.grass.length + newBatch.length < max &&
+        Math.random() < spreadChance
       ) {
         const angle = Math.random() * Math.PI * 2;
         const dist  = 20 + Math.random() * SPREAD_RADIUS;
@@ -54,7 +53,7 @@ export class Simulation {
     }
 
     if (
-      this.grass.length + newBatch.length < MAX_PATCHES &&
+      this.grass.length + newBatch.length < max &&
       Math.random() < RANDOM_SPAWN_CHANCE * speedMult
     ) {
       const x = Math.random() * this.width;

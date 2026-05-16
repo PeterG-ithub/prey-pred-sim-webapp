@@ -8,16 +8,18 @@
       *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
       :root {
-        --bg:         #0a0a0f;
-        --surface:    #11111b;
-        --border:     #2a2a3d;
-        --accent:     #3d3d5c;
-        --text:       #c0c0d8;
-        --text-dim:   #5a5a7a;
-        --prey:       #4ade80;
-        --predator:   #f87171;
-        --grass:      #166534;
-        --bar-h:      68px;
+        --bg:        #0a0a0f;
+        --surface:   #11111b;
+        --surface2:  #16162a;
+        --border:    #2a2a3d;
+        --accent:    #3d3d5c;
+        --text:      #c0c0d8;
+        --text-dim:  #5a5a7a;
+        --prey:      #4ade80;
+        --predator:  #f87171;
+        --grass:     #166534;
+        --bar-h:     68px;
+        --panel-w:   290px;
       }
 
       html, body {
@@ -28,12 +30,12 @@
         overflow: hidden;
       }
 
-      /* ── Top settings button ── */
+      /* ── Settings button ── */
       #btn-settings {
         position: fixed;
         top: 14px;
         right: 16px;
-        z-index: 10;
+        z-index: 20;
         background: var(--surface);
         border: 1px solid var(--border);
         color: var(--text);
@@ -55,6 +57,10 @@
         align-items: center;
         justify-content: center;
         padding: 16px;
+        transition: padding-right 0.3s ease;
+      }
+      #sim-wrapper.panel-open {
+        padding-right: calc(var(--panel-w) + 16px);
       }
 
       #sim-canvas {
@@ -64,6 +70,121 @@
         box-shadow: 0 0 0 1px #0a0a0f, 0 0 32px rgba(0,0,0,0.6);
         max-width: 100%;
         max-height: 100%;
+      }
+
+      /* ── Settings panel ── */
+      #settings-panel {
+        position: fixed;
+        top: 0;
+        right: 0;
+        bottom: var(--bar-h);
+        width: var(--panel-w);
+        background: var(--surface);
+        border-left: 1.5px solid var(--border);
+        transform: translateX(100%);
+        transition: transform 0.3s ease;
+        z-index: 15;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+      }
+      #settings-panel.open { transform: translateX(0); }
+
+      .panel-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 14px 16px;
+        border-bottom: 1px solid var(--border);
+        flex-shrink: 0;
+      }
+      .panel-header span {
+        font-size: 13px;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: var(--text-dim);
+      }
+      #btn-close-settings {
+        background: none;
+        border: none;
+        color: var(--text-dim);
+        font-size: 16px;
+        cursor: pointer;
+        padding: 2px 6px;
+        border-radius: 4px;
+        line-height: 1;
+      }
+      #btn-close-settings:hover { color: var(--text); background: var(--accent); }
+
+      .panel-body {
+        flex: 1;
+        overflow-y: auto;
+        padding: 16px;
+        display: flex;
+        flex-direction: column;
+        gap: 24px;
+      }
+
+      .settings-section h3 {
+        font-size: 10px;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        color: var(--text-dim);
+        margin-bottom: 14px;
+        padding-bottom: 6px;
+        border-bottom: 1px solid var(--border);
+      }
+
+      .setting-row {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        margin-bottom: 14px;
+      }
+      .setting-row:last-child { margin-bottom: 0; }
+
+      .setting-label {
+        display: flex;
+        justify-content: space-between;
+        font-size: 11px;
+        color: var(--text);
+      }
+      .setting-label .hint {
+        font-size: 10px;
+        color: var(--text-dim);
+      }
+      .setting-val {
+        color: var(--prey);
+        font-weight: bold;
+        min-width: 28px;
+        text-align: right;
+      }
+
+      .setting-note {
+        font-size: 10px;
+        color: var(--text-dim);
+        font-style: italic;
+        margin-top: 2px;
+      }
+
+      input[type="range"].setting-slider {
+        -webkit-appearance: none;
+        appearance: none;
+        width: 100%;
+        height: 4px;
+        background: var(--accent);
+        border-radius: 2px;
+        outline: none;
+        cursor: pointer;
+      }
+      input[type="range"].setting-slider::-webkit-slider-thumb {
+        -webkit-appearance: none;
+        width: 14px;
+        height: 14px;
+        border-radius: 50%;
+        background: var(--text);
+        border: 2px solid var(--border);
+        cursor: pointer;
       }
 
       /* ── Control bar ── */
@@ -79,9 +200,9 @@
         align-items: center;
         gap: 8px;
         padding: 0 16px;
+        z-index: 10;
       }
 
-      /* Dividers */
       .sep {
         width: 1px;
         height: 32px;
@@ -90,7 +211,6 @@
         margin: 0 4px;
       }
 
-      /* Buttons */
       .ctrl-btn {
         background: var(--bg);
         border: 1px solid var(--border);
@@ -106,12 +226,9 @@
         flex-shrink: 0;
       }
       .ctrl-btn:hover { background: var(--accent); border-color: #4a4a6a; }
-      .ctrl-btn.primary {
-        border-color: #4a4a6a;
-        background: #1a1a2e;
-      }
+      .ctrl-btn.primary { border-color: #4a4a6a; background: #1a1a2e; }
+      .ctrl-btn.active  { border-color: #4ade80; color: #4ade80; }
 
-      /* Speed control */
       #speed-group {
         display: flex;
         align-items: center;
@@ -143,14 +260,8 @@
         border: 2px solid var(--border);
         cursor: pointer;
       }
-      #speed-val {
-        font-size: 11px;
-        color: var(--text-dim);
-        width: 20px;
-        text-align: right;
-      }
+      #speed-val { font-size: 11px; color: var(--text-dim); width: 20px; text-align: right; }
 
-      /* Population legend */
       #pop-legend {
         display: flex;
         align-items: center;
@@ -164,41 +275,69 @@
         font-size: 11px;
         color: var(--text-dim);
       }
-      .pop-dot {
-        width: 8px;
-        height: 8px;
-        border-radius: 50%;
-        flex-shrink: 0;
-      }
-      .pop-dot.prey      { background: var(--prey); }
-      .pop-dot.predator  { background: var(--predator); }
-      .pop-dot.grass     { background: var(--grass); border: 1px solid #22c55e; }
-      .pop-count {
-        color: var(--text);
-        font-weight: bold;
-      }
+      .pop-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+      .pop-dot.prey     { background: var(--prey); }
+      .pop-dot.predator { background: var(--predator); }
+      .pop-dot.grass    { background: var(--grass); border: 1px solid #22c55e; }
+      .pop-count { color: var(--text); font-weight: bold; }
 
-      /* Tick counter */
-      #tick-counter {
-        font-size: 11px;
-        color: var(--text-dim);
-        white-space: nowrap;
-        flex-shrink: 0;
-      }
-      #tick-val {
-        color: var(--text);
-        font-weight: bold;
-      }
+      #tick-counter { font-size: 11px; color: var(--text-dim); white-space: nowrap; flex-shrink: 0; }
+      #tick-val     { color: var(--text); font-weight: bold; }
 
-      /* Push panel button to far right */
-      #btn-panel {
-        margin-left: auto;
-      }
+      #btn-panel { margin-left: auto; }
     </style>
   </head>
   <body>
 
     <button id="btn-settings">⚙ Settings</button>
+
+    <!-- Settings sidebar -->
+    <div id="settings-panel">
+      <div class="panel-header">
+        <span>Settings</span>
+        <button id="btn-close-settings">✕</button>
+      </div>
+      <div class="panel-body">
+
+        <div class="settings-section">
+          <h3>Grass</h3>
+
+          <div class="setting-row">
+            <div class="setting-label">
+              Initial patches
+              <span class="setting-val" id="val-initial-grass">65</span>
+            </div>
+            <input class="setting-slider" type="range" id="set-initial-grass" min="10" max="150" value="65" />
+            <span class="setting-note">Takes effect on restart</span>
+          </div>
+
+          <div class="setting-row">
+            <div class="setting-label">
+              Growth speed
+              <span class="setting-val" id="val-growth-speed">5</span>
+            </div>
+            <input class="setting-slider" type="range" id="set-growth-speed" min="1" max="10" value="5" />
+          </div>
+
+          <div class="setting-row">
+            <div class="setting-label">
+              Spread rate
+              <span class="setting-val" id="val-spread-speed">5</span>
+            </div>
+            <input class="setting-slider" type="range" id="set-spread-speed" min="1" max="10" value="5" />
+          </div>
+
+          <div class="setting-row">
+            <div class="setting-label">
+              Max patches
+              <span class="setting-val" id="val-max-patches">200</span>
+            </div>
+            <input class="setting-slider" type="range" id="set-max-patches" min="50" max="500" step="10" value="200" />
+          </div>
+        </div>
+
+      </div>
+    </div>
 
     <div id="sim-wrapper">
       <canvas id="sim-canvas"></canvas>
