@@ -7,23 +7,239 @@
     <style>
       *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-      body {
-        background: #0a0a0f;
+      :root {
+        --bg:         #0a0a0f;
+        --surface:    #11111b;
+        --border:     #2a2a3d;
+        --accent:     #3d3d5c;
+        --text:       #c0c0d8;
+        --text-dim:   #5a5a7a;
+        --prey:       #4ade80;
+        --predator:   #f87171;
+        --grass:      #166534;
+        --bar-h:      68px;
+      }
+
+      html, body {
+        height: 100%;
+        background: var(--bg);
+        font-family: 'Courier New', monospace;
+        color: var(--text);
+        overflow: hidden;
+      }
+
+      /* ── Top settings button ── */
+      #btn-settings {
+        position: fixed;
+        top: 14px;
+        right: 16px;
+        z-index: 10;
+        background: var(--surface);
+        border: 1px solid var(--border);
+        color: var(--text);
+        padding: 6px 14px;
+        border-radius: 6px;
+        font-family: inherit;
+        font-size: 12px;
+        cursor: pointer;
+        letter-spacing: 0.05em;
+        transition: border-color 0.15s, background 0.15s;
+      }
+      #btn-settings:hover { background: var(--accent); border-color: #4a4a6a; }
+
+      /* ── Canvas wrapper ── */
+      #sim-wrapper {
+        position: absolute;
+        inset: 0 0 var(--bar-h) 0;
         display: flex;
         align-items: center;
         justify-content: center;
-        min-height: 100vh;
-        font-family: monospace;
+        padding: 16px;
       }
 
       #sim-canvas {
         display: block;
-        border: 1px solid #1e1e2e;
+        border: 1.5px solid var(--border);
+        border-radius: 4px;
+        box-shadow: 0 0 0 1px #0a0a0f, 0 0 32px rgba(0,0,0,0.6);
+        max-width: 100%;
+        max-height: 100%;
+      }
+
+      /* ── Control bar ── */
+      #control-bar {
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        height: var(--bar-h);
+        background: var(--surface);
+        border-top: 1.5px solid var(--border);
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 0 16px;
+      }
+
+      /* Dividers */
+      .sep {
+        width: 1px;
+        height: 32px;
+        background: var(--border);
+        flex-shrink: 0;
+        margin: 0 4px;
+      }
+
+      /* Buttons */
+      .ctrl-btn {
+        background: var(--bg);
+        border: 1px solid var(--border);
+        color: var(--text);
+        padding: 6px 14px;
+        border-radius: 6px;
+        font-family: inherit;
+        font-size: 12px;
+        cursor: pointer;
+        white-space: nowrap;
+        letter-spacing: 0.04em;
+        transition: border-color 0.15s, background 0.15s;
+        flex-shrink: 0;
+      }
+      .ctrl-btn:hover { background: var(--accent); border-color: #4a4a6a; }
+      .ctrl-btn.primary {
+        border-color: #4a4a6a;
+        background: #1a1a2e;
+      }
+
+      /* Speed control */
+      #speed-group {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        flex-shrink: 0;
+      }
+      #speed-group label {
+        font-size: 11px;
+        color: var(--text-dim);
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+      }
+      #speed-slider {
+        -webkit-appearance: none;
+        appearance: none;
+        width: 100px;
+        height: 4px;
+        background: var(--accent);
+        border-radius: 2px;
+        outline: none;
+        cursor: pointer;
+      }
+      #speed-slider::-webkit-slider-thumb {
+        -webkit-appearance: none;
+        width: 14px;
+        height: 14px;
+        border-radius: 50%;
+        background: var(--text);
+        border: 2px solid var(--border);
+        cursor: pointer;
+      }
+      #speed-val {
+        font-size: 11px;
+        color: var(--text-dim);
+        width: 20px;
+        text-align: right;
+      }
+
+      /* Population legend */
+      #pop-legend {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        flex-shrink: 0;
+      }
+      .pop-item {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 11px;
+        color: var(--text-dim);
+      }
+      .pop-dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        flex-shrink: 0;
+      }
+      .pop-dot.prey      { background: var(--prey); }
+      .pop-dot.predator  { background: var(--predator); }
+      .pop-dot.grass     { background: var(--grass); border: 1px solid #22c55e; }
+      .pop-count {
+        color: var(--text);
+        font-weight: bold;
+      }
+
+      /* Tick counter */
+      #tick-counter {
+        font-size: 11px;
+        color: var(--text-dim);
+        white-space: nowrap;
+        flex-shrink: 0;
+      }
+      #tick-val {
+        color: var(--text);
+        font-weight: bold;
+      }
+
+      /* Push panel button to far right */
+      #btn-panel {
+        margin-left: auto;
       }
     </style>
   </head>
   <body>
-    <canvas id="sim-canvas"></canvas>
+
+    <button id="btn-settings">⚙ Settings</button>
+
+    <div id="sim-wrapper">
+      <canvas id="sim-canvas"></canvas>
+    </div>
+
+    <div id="control-bar">
+      <button class="ctrl-btn" id="btn-restart">⟳ Restart</button>
+      <button class="ctrl-btn primary" id="btn-play">▶ Play</button>
+
+      <div class="sep"></div>
+
+      <div id="speed-group">
+        <label for="speed-slider">Speed</label>
+        <input type="range" id="speed-slider" min="1" max="10" value="5" />
+        <span id="speed-val">5</span>
+      </div>
+
+      <div class="sep"></div>
+
+      <div id="pop-legend">
+        <div class="pop-item">
+          <div class="pop-dot prey"></div>
+          Prey <span class="pop-count" id="count-prey">—</span>
+        </div>
+        <div class="pop-item">
+          <div class="pop-dot predator"></div>
+          Predators <span class="pop-count" id="count-pred">—</span>
+        </div>
+        <div class="pop-item">
+          <div class="pop-dot grass"></div>
+          Grass <span class="pop-count" id="count-grass">—</span>
+        </div>
+      </div>
+
+      <div class="sep"></div>
+
+      <div id="tick-counter">Tick <span id="tick-val">0</span></div>
+
+      <button class="ctrl-btn" id="btn-panel">⊞ Panel</button>
+    </div>
+
     <script type="module" src="/src/main.js"></script>
   </body>
 </html>
