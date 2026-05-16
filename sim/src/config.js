@@ -1,9 +1,10 @@
 export const config = {
   // ── Grass ──────────────────────────────────────────────────────────────
-  initialGrass: 65,
-  growthSpeed:  5,    // 1–10 scale
-  spreadSpeed:  5,    // 1–10 scale
-  maxPatches:   200,
+  initialGrass:      65,
+  growthSpeed:       5,    // 1–10 scale
+  spreadSpeed:       5,    // 1–10 scale
+  maxPatches:        200,
+  grassRandomSpawn:  2,    // 1–10 scale
 
   // ── Prey ───────────────────────────────────────────────────────────────
   initialPrey:      20,
@@ -19,8 +20,9 @@ export const config = {
 };
 
 // ── Grass helpers ──────────────────────────────────────────────────────────
-export const toGrowthRate   = (s) => s * 0.0005;
-export const toSpreadChance = (s) => s * 0.00036;
+export const toGrowthRate      = (s) => s * 0.0005;
+export const toSpreadChance    = (s) => s * 0.00036;
+export const toRandomSpawn     = (s) => s * 0.002;   // 1→0.002  2→0.004(orig)  10→0.02
 
 // ── Prey helpers ───────────────────────────────────────────────────────────
 export const toPreySpeed    = (s) => 0.3 + s * 0.22;  // 1→0.52  5→1.4  10→2.5

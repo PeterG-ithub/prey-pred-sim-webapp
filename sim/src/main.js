@@ -32,17 +32,45 @@ function computeSize() {
 let { w, h } = computeSize();
 const ctx = initCanvas(canvasEl, w, h);
 
-let sim    = new Simulation(w, h);
-let paused = true;
+let sim      = new Simulation(w, h);
+let paused   = true;
+let inspected = null;  // { type: 'prey'|'grass', entity }
 
 initUI({
   onPlay:    () => { paused = !paused; },
-  onRestart: () => { sim = new Simulation(w, h); },
+  onRestart: () => { sim = new Simulation(w, h); inspected = null; },
+});
+
+canvasEl.addEventListener('click', (e) => {
+  const rect  = canvasEl.getBoundingClientRect();
+  const mx    = (e.clientX - rect.left)  * (w / rect.width);
+  const my    = (e.clientY - rect.top)   * (h / rect.height);
+
+  const PREY_R2  = 20 * 20;
+  const GRASS_R2 = 18 * 18;
+
+  let best = null, bestD2 = Infinity;
+
+  for (const p of sim.prey) {
+    const d2 = (p.x - mx) ** 2 + (p.y - my) ** 2;
+    if (d2 < PREY_R2 && d2 < bestD2) { best = { type: 'prey', entity: p }; bestD2 = d2; }
+  }
+  if (!best) {
+    for (const g of sim.grass) {
+      const d2 = (g.x - mx) ** 2 + (g.y - my) ** 2;
+      if (d2 < GRASS_R2 && d2 < bestD2) { best = { type: 'grass', entity: g }; bestD2 = d2; }
+    }
+  }
+  inspected = (best?.entity === inspected?.entity) ? null : best;
 });
 
 function loop() {
+  // Clear stale inspected refs
+  if (inspected?.type === 'prey'  && inspected.entity.dead)       inspected = null;
+  if (inspected?.type === 'grass' && inspected.entity.amount <= 0) inspected = null;
+
   if (!paused) sim.update(getSpeed() / 5);
-  drawFrame(ctx, w, h, sim);
+  drawFrame(ctx, w, h, sim, inspected);
   drawGraph(graphCanvas, sim.graphHistory);
   updateUI(sim.stats());
   requestAnimationFrame(loop);

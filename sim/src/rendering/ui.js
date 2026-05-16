@@ -54,10 +54,11 @@ export function initUI({ onPlay, onRestart }) {
   btnCloseGraph.addEventListener('click', () => toggleGraph(false));
 
   // Grass settings
-  _bindSetting('set-initial-grass', 'val-initial-grass', (v) => { config.initialGrass = v; });
-  _bindSetting('set-growth-speed',  'val-growth-speed',  (v) => { config.growthSpeed  = v; });
-  _bindSetting('set-spread-speed',  'val-spread-speed',  (v) => { config.spreadSpeed  = v; });
-  _bindSetting('set-max-patches',   'val-max-patches',   (v) => { config.maxPatches   = v; });
+  _bindSetting('set-initial-grass',       'val-initial-grass',       (v) => { config.initialGrass      = v; });
+  _bindSetting('set-growth-speed',        'val-growth-speed',        (v) => { config.growthSpeed        = v; });
+  _bindSetting('set-spread-speed',        'val-spread-speed',        (v) => { config.spreadSpeed        = v; });
+  _bindSetting('set-max-patches',         'val-max-patches',         (v) => { config.maxPatches         = v; });
+  _bindSetting('set-grass-random-spawn',  'val-grass-random-spawn',  (v) => { config.grassRandomSpawn   = v; });
 
   // Prey settings
   _bindSetting('set-initial-prey',       'val-initial-prey',       (v) => { config.initialPrey      = v; });

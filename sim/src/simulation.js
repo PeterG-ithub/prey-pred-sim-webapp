@@ -2,16 +2,16 @@ import { Grass } from './entities/grass.js';
 import { Prey, STATE, TICKS_PER_YEAR, ADULT_AGE, MAX_ENERGY,
          ENERGY_PER_BITE, REPRO_COST, ABANDON_AMOUNT,
          SCAN_INTERVAL, WANDER_TURN, SEEK_TURN } from './entities/prey.js';
-import { config, toGrowthRate, toSpreadChance,
+import { config, toGrowthRate, toSpreadChance, toRandomSpawn,
          toPreySpeed, toMetabolism, toEatRate } from './config.js';
 import { SpatialGrid } from './utils/spatialGrid.js';
 import { GraphHistory } from './rendering/graph.js';
 
 const SPREAD_THRESHOLD    = 0.85;
 const SPREAD_RADIUS       = 80;
-const RANDOM_SPAWN_CHANCE = 0.004;
 const MIN_PATCH_DIST      = 28;
-const EAT_RADIUS          = 12;
+const EAT_RADIUS          = 12;   // must be this close to targeted grass to enter EAT
+const OPPORTUNISTIC_RADIUS = 22;  // snack on any grass within this range while passing
 
 export class Simulation {
   constructor(width, height) {
@@ -90,15 +90,15 @@ export class Simulation {
 
     if (
       this.grass.length + newBatch.length < max &&
-      Math.random() < RANDOM_SPAWN_CHANCE * speedMult
+      Math.random() < toRandomSpawn(config.grassRandomSpawn) * speedMult
     ) {
       const x = Math.random() * this.width;
       const y = Math.random() * this.height;
-      if (this._clearZone(x, y, newBatch)) newBatch.push(new Grass(x, y, 0.05));
+      newBatch.push(new Grass(x, y, 0.05));
     }
 
     for (const g of newBatch) this.grass.push(g);
-    this.grass = this.grass.filter(g => g.amount > 0);
+    this.grass = this.grass.filter(g => g.amount > ABANDON_AMOUNT);
   }
 
   _clearZone(x, y, extras = []) {
@@ -158,6 +158,7 @@ export class Simulation {
     if (p.scanCooldown > 0) {
       p.angle += (Math.random() - 0.5) * 2 * WANDER_TURN * speedMult;
       this._moveAndBounce(p, speed, speedMult);
+      this._tryOpportunisticEat(p);
       return;
     }
     p.scanCooldown = SCAN_INTERVAL;
@@ -209,7 +210,7 @@ export class Simulation {
   }
 
   _stateEat(p, speedMult, eatRate, satiationE) {
-    if (!p.targetGrass || p.targetGrass.amount <= 0) {
+    if (!p.targetGrass || p.targetGrass.amount <= ABANDON_AMOUNT) {
       p.targetGrass = null; p.state = STATE.WANDER; return;
     }
     if (p.energy >= satiationE) {
@@ -243,10 +244,11 @@ export class Simulation {
 
     p.angle = _lerpAngle(p.angle, Math.atan2(dy, dx), SEEK_TURN * speedMult);
     this._moveAndBounce(p, speed, speedMult);
+    this._tryOpportunisticEat(p);
   }
 
   _tryOpportunisticEat(p) {
-    const g = this._grassGrid.nearest(p.x, p.y, EAT_RADIUS, g => g.amount > ABANDON_AMOUNT);
+    const g = this._grassGrid.nearest(p.x, p.y, OPPORTUNISTIC_RADIUS, g => g.amount > ABANDON_AMOUNT);
     if (!g) return false;
     p.targetGrass = g;
     p.state = STATE.EAT;
