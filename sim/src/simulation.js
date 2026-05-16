@@ -135,7 +135,7 @@ export class Simulation {
           this._stateWander(p, speedMult, speed, satiationE, hungerE, perception, repoCooldownTicks);
           break;
         case STATE.SEEK_FOOD:
-          this._stateSeekFood(p, speedMult, speed, eatRate, satiationE);
+          this._stateSeekFood(p, speedMult, speed, eatRate, satiationE, perception);
           break;
         case STATE.EAT:
           this._stateEat(p, speedMult, eatRate, satiationE);
@@ -176,12 +176,26 @@ export class Simulation {
 
     p.angle += (Math.random() - 0.5) * 2 * WANDER_TURN * speedMult;
     this._moveAndBounce(p, speed, speedMult);
+    // Opportunistic: eat whatever is underfoot if hungry
+    if (p.energy < satiationE) this._tryOpportunisticEat(p);
   }
 
-  _stateSeekFood(p, speedMult, speed, eatRate, satiationE) {
+  _stateSeekFood(p, speedMult, speed, eatRate, satiationE, perception) {
     if (!p.targetGrass || p.targetGrass.amount <= ABANDON_AMOUNT) {
       p.targetGrass = null; p.state = STATE.WANDER; return;
     }
+
+    // Opportunistic: eat whatever is underfoot immediately
+    if (this._tryOpportunisticEat(p)) return;
+
+    // Periodically re-evaluate — switch to a closer patch if one exists
+    p.scanCooldown -= speedMult;
+    if (p.scanCooldown <= 0) {
+      p.scanCooldown = SCAN_INTERVAL;
+      const closer = this._grassGrid.nearest(p.x, p.y, perception, g => g.amount > ABANDON_AMOUNT);
+      if (closer) p.targetGrass = closer;
+    }
+
     const dx = p.targetGrass.x - p.x;
     const dy = p.targetGrass.y - p.y;
     if (dx * dx + dy * dy < EAT_RADIUS * EAT_RADIUS) {
@@ -226,6 +240,14 @@ export class Simulation {
 
     p.angle = _lerpAngle(p.angle, Math.atan2(dy, dx), SEEK_TURN * speedMult);
     this._moveAndBounce(p, speed, speedMult);
+  }
+
+  _tryOpportunisticEat(p) {
+    const g = this._grassGrid.nearest(p.x, p.y, EAT_RADIUS, g => g.amount > ABANDON_AMOUNT);
+    if (!g) return false;
+    p.targetGrass = g;
+    p.state = STATE.EAT;
+    return true;
   }
 
   _moveAndBounce(p, speed, speedMult) {
