@@ -1,23 +1,28 @@
 import { initCanvas, drawFrame } from './rendering/canvas.js';
 import { initUI, updateUI, getSpeed } from './rendering/ui.js';
 import { Simulation } from './simulation.js';
+import { drawGraph } from './rendering/graph.js';
 
 const BAR_H     = 68;
 const PADDING   = 32;
+const PANEL_W   = 290;
 const GRID_CELL = 40;
 
-const canvasEl = document.getElementById('sim-canvas');
+const canvasEl  = document.getElementById('sim-canvas');
+const graphCanvas = document.getElementById('graph-canvas');
 
 function snap(n) {
   return Math.floor(n / GRID_CELL) * GRID_CELL;
 }
 
 function computeSize() {
-  const panelOpen = document.getElementById('settings-panel').classList.contains('open');
-  const panelW    = panelOpen ? 290 : 0;
-  const availW    = window.innerWidth  - PADDING - panelW;
-  const availH    = window.innerHeight - BAR_H   - PADDING;
-  const aspect    = 4 / 3;
+  const settingsOpen = document.getElementById('settings-panel').classList.contains('open');
+  const graphOpen    = document.getElementById('graph-panel').classList.contains('open');
+  const rightW = settingsOpen ? PANEL_W : 0;
+  const leftW  = graphOpen   ? PANEL_W : 0;
+  const availW = window.innerWidth  - PADDING - rightW - leftW;
+  const availH = window.innerHeight - BAR_H   - PADDING;
+  const aspect = 4 / 3;
   let w = availW;
   let h = Math.round(w / aspect);
   if (h > availH) { h = availH; w = Math.round(h * aspect); }
@@ -38,6 +43,7 @@ initUI({
 function loop() {
   if (!paused) sim.update(getSpeed() / 5);
   drawFrame(ctx, w, h, sim);
+  drawGraph(graphCanvas, sim.graphHistory);
   updateUI(sim.stats());
   requestAnimationFrame(loop);
 }

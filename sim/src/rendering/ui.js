@@ -28,19 +28,30 @@ export function initUI({ onPlay, onRestart }) {
     document.getElementById('tick-val').textContent = 0;
   });
 
-  // Settings panel open / close
-  const panel    = document.getElementById('settings-panel');
-  const wrapper  = document.getElementById('sim-wrapper');
-  const btnOpen  = document.getElementById('btn-settings');
-  const btnClose = document.getElementById('btn-close-settings');
+  // Settings panel (right)
+  const settingsPanel = document.getElementById('settings-panel');
+  const wrapper       = document.getElementById('sim-wrapper');
+  const btnSettings   = document.getElementById('btn-settings');
+  const btnCloseSettings = document.getElementById('btn-close-settings');
 
-  function togglePanel(open) {
-    panel.classList.toggle('open', open);
+  function toggleSettings(open) {
+    settingsPanel.classList.toggle('open', open);
     wrapper.classList.toggle('panel-open', open);
   }
+  btnSettings.addEventListener('click',      () => toggleSettings(!settingsPanel.classList.contains('open')));
+  btnCloseSettings.addEventListener('click', () => toggleSettings(false));
 
-  btnOpen.addEventListener('click',  () => togglePanel(!panel.classList.contains('open')));
-  btnClose.addEventListener('click', () => togglePanel(false));
+  // Graph panel (left)
+  const graphPanel    = document.getElementById('graph-panel');
+  const btnPanel      = document.getElementById('btn-panel');
+  const btnCloseGraph = document.getElementById('btn-close-graph');
+
+  function toggleGraph(open) {
+    graphPanel.classList.toggle('open', open);
+    wrapper.classList.toggle('graph-open', open);
+  }
+  btnPanel.addEventListener('click',      () => toggleGraph(!graphPanel.classList.contains('open')));
+  btnCloseGraph.addEventListener('click', () => toggleGraph(false));
 
   // Grass settings
   _bindSetting('set-initial-grass', 'val-initial-grass', (v) => { config.initialGrass = v; });
@@ -72,8 +83,10 @@ function _bindSetting(sliderId, valId, onChange, format = v => v) {
 }
 
 export function updateUI({ prey = 0, predators = 0, grass = 0, tick = 0 } = {}) {
-  document.getElementById('count-prey').textContent  = prey;
-  document.getElementById('count-pred').textContent  = predators;
-  document.getElementById('count-grass').textContent = grass;
-  document.getElementById('tick-val').textContent    = tick;
+  document.getElementById('count-prey').textContent       = prey;
+  document.getElementById('count-pred').textContent       = predators;
+  document.getElementById('count-grass').textContent      = grass;
+  document.getElementById('tick-val').textContent         = tick;
+  document.getElementById('graph-prey-count').textContent = prey;
+  document.getElementById('graph-pred-count').textContent = predators;
 }

@@ -30,7 +30,25 @@
         overflow: hidden;
       }
 
-      /* ── Settings button ── */
+      /* ── Top buttons (settings + panel) ── */
+      #btn-panel {
+        position: fixed;
+        top: 14px;
+        left: 16px;
+        z-index: 10;
+        background: var(--surface);
+        border: 1px solid var(--border);
+        color: var(--text);
+        padding: 6px 14px;
+        border-radius: 6px;
+        font-family: inherit;
+        font-size: 12px;
+        cursor: pointer;
+        letter-spacing: 0.05em;
+        transition: border-color 0.15s, background 0.15s;
+      }
+      #btn-panel:hover { background: var(--accent); border-color: #4a4a6a; }
+
       #btn-settings {
         position: fixed;
         top: 14px;
@@ -57,10 +75,57 @@
         align-items: center;
         justify-content: center;
         padding: 16px;
-        transition: padding-right 0.3s ease;
+        transition: padding-right 0.3s ease, padding-left 0.3s ease;
       }
-      #sim-wrapper.panel-open {
-        padding-right: calc(var(--panel-w) + 16px);
+      #sim-wrapper.panel-open  { padding-right: calc(var(--panel-w) + 16px); }
+      #sim-wrapper.graph-open  { padding-left:  calc(var(--panel-w) + 16px); }
+
+      /* ── Graph panel (left) ── */
+      #graph-panel {
+        position: fixed;
+        top: 0;
+        left: 0;
+        bottom: var(--bar-h);
+        width: var(--panel-w);
+        background: var(--surface);
+        border-right: 1.5px solid var(--border);
+        transform: translateX(-100%);
+        transition: transform 0.3s ease;
+        z-index: 20;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+      }
+      #graph-panel.open { transform: translateX(0); }
+      #btn-close-graph {
+        background: none; border: none; color: var(--text-dim);
+        font-size: 16px; cursor: pointer; padding: 2px 6px;
+        border-radius: 4px; line-height: 1;
+      }
+      #btn-close-graph:hover { color: var(--text); background: var(--accent); }
+
+      .graph-legend {
+        display: flex;
+        gap: 16px;
+        margin-bottom: 10px;
+        font-size: 11px;
+      }
+      .legend-prey { color: #60a5fa; }
+      .legend-pred { color: #f87171; }
+      .legend-count { font-weight: bold; margin-left: 4px; }
+
+      #graph-canvas {
+        display: block;
+        width: 100%;
+        border: 1px solid var(--border);
+        border-radius: 3px;
+      }
+      .graph-hint {
+        margin-top: 8px;
+        font-size: 9px;
+        color: var(--text-dim);
+        text-align: center;
+        letter-spacing: 0.04em;
       }
 
       #sim-canvas {
@@ -289,7 +354,24 @@
   </head>
   <body>
 
+    <button id="btn-panel">⊞ Population</button>
     <button id="btn-settings">⚙ Settings</button>
+
+    <!-- Graph panel (left) -->
+    <div id="graph-panel">
+      <div class="panel-header">
+        <span>Population</span>
+        <button id="btn-close-graph">✕</button>
+      </div>
+      <div class="panel-body">
+        <div class="graph-legend">
+          <span class="legend-prey">● Prey<span class="legend-count" id="graph-prey-count">0</span></span>
+          <span class="legend-pred">● Predators<span class="legend-count" id="graph-pred-count">0</span></span>
+        </div>
+        <canvas id="graph-canvas" width="258" height="180"></canvas>
+        <div class="graph-hint">300 samples · 10 ticks each</div>
+      </div>
+    </div>
 
     <!-- Settings sidebar -->
     <div id="settings-panel">
@@ -425,15 +507,13 @@
         </div>
         <div class="pop-item">
           <div class="pop-dot grass"></div>
-          Grass <span class="pop-count" id="count-grass">—</span>
+          Biomass <span class="pop-count" id="count-grass">—</span>
         </div>
       </div>
 
       <div class="sep"></div>
 
       <div id="tick-counter">Tick <span id="tick-val">0</span></div>
-
-      <button class="ctrl-btn" id="btn-panel">⊞ Panel</button>
     </div>
 
     <script type="module" src="/src/main.js"></script>

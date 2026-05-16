@@ -5,6 +5,7 @@ import { Prey, STATE, TICKS_PER_YEAR, ADULT_AGE, MAX_ENERGY,
 import { config, toGrowthRate, toSpreadChance,
          toPreySpeed, toMetabolism, toEatRate } from './config.js';
 import { SpatialGrid } from './utils/spatialGrid.js';
+import { GraphHistory } from './rendering/graph.js';
 
 const SPREAD_THRESHOLD    = 0.85;
 const SPREAD_RADIUS       = 80;
@@ -19,8 +20,9 @@ export class Simulation {
     this.grass     = [];
     this.prey      = [];
     this.tick      = 0;
-    this._grassGrid = new SpatialGrid(100);
-    this._preyGrid  = new SpatialGrid(100);
+    this._grassGrid  = new SpatialGrid(100);
+    this._preyGrid   = new SpatialGrid(100);
+    this.graphHistory = new GraphHistory();
     this._initGrass();
     this._initPrey();
   }
@@ -51,6 +53,7 @@ export class Simulation {
     this._updateGrass(speedMult);
     this._rebuildGrids();
     this._updatePrey(speedMult);
+    this.graphHistory.record(this.tick, this.prey.length, 0);
   }
 
   _rebuildGrids() {
@@ -282,7 +285,8 @@ export class Simulation {
 
   // ── Stats ─────────────────────────────────────────────────────────────
   stats() {
-    return { grass: this.grass.length, prey: this.prey.length, predators: 0, tick: this.tick };
+    const biomass = Math.round(this.grass.reduce((s, g) => s + g.amount, 0));
+    return { grass: biomass, prey: this.prey.length, predators: 0, tick: this.tick };
   }
 }
 
